@@ -1,0 +1,36 @@
+\document-information[title={Dummy Text}, author = {Undefined Author}]
+\begin-style[apply-yo=#zz]
+    \style.font-weight{bold}
+    \style.label{bold-label}
+\end
+\begin-style2[apply-yo=document]
+    \style.font-weight{bold}
+    \style.label{bold-label}
+\end
+\document
+\chapter[title="First chapter"]
+Starting text - Part A.
+\begin-text2[or="3",argument-1="44",argument-0="ABC"]
+aaabbb
+\end
+\section[title="Section One"]
+Starting text - Part B.
+\subsection[title="Subsection 1.1", label = "aaa"]
+Starting text - Part C.
+\section[title="Section Two"]
+Starting text - Part D.
+\text[id="zz"]{aaa}
+External part
+\subsection[title="Subsection 2.1"]
+Starting text - Part E.
+\subsection[title="Subsection 2.2"]
+Starting text - Part F.
+\subsection[title="Subsection 2.3"]
+Starting text - Part G.
+\section[title="Section Three"]
+Starting text - Part H.
+\chapter[title="Second chapter"]
+Starting text - Part I.
+\section[title="Section Second-One"]
+Starting text - Part J.
+
