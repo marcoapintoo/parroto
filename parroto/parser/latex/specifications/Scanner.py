@@ -88,17 +88,17 @@ class Scanner(object):
    eofSym  = 0
 
    charSetSize = 256
-   maxT = 28
-   noSym = 28
+   maxT = 27
+   noSym = 27
    start = [
      0,  0,  0,  0,  0,  0,  0,  0,  0,  4,  4,  4,  4,  0,  0,  0,
      0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-     4,  1,  9,  1,  1,  1,  1,  7,  1,  1,  1,  0,  1,  1,  1,  1,
-     5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  1,  1,  0, 15,  0,  1,
+     4,  1,  7,  1,  1,  1,  1,  5,  1,  1,  1,  0,  1,  1,  1,  1,
+     9,  9,  9,  9,  9,  9,  9,  9,  9,  9,  1,  1,  0, 20,  0,  1,
      0,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,
-     2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  1, 16,  1,  0,  2,
+     2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  1, 21,  1,  0,  2,
      0,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,
-     2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2, 11,  1, 13,  0,  0,
+     2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2, 15,  1, 18,  0,  0,
      0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
      0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
      0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
@@ -235,29 +235,29 @@ class Scanner(object):
    def CheckLiteral( self ):
       lit = self.t.val
       if lit == "-":
-         self.t.kind = 6
+         self.t.kind = 8
       elif lit == "start":
-         self.t.kind = 16
+         self.t.kind = 15
       elif lit == "Start":
-         self.t.kind = 17
+         self.t.kind = 16
       elif lit == "START":
-         self.t.kind = 18
+         self.t.kind = 17
       elif lit == "stop":
-         self.t.kind = 19
+         self.t.kind = 18
       elif lit == "Stop":
-         self.t.kind = 20
+         self.t.kind = 19
       elif lit == "STOP":
-         self.t.kind = 21
+         self.t.kind = 20
       elif lit == "[":
-         self.t.kind = 22
+         self.t.kind = 21
       elif lit == "]":
-         self.t.kind = 23
+         self.t.kind = 22
       elif lit == ":":
-         self.t.kind = 24
+         self.t.kind = 23
       elif lit == ",":
-         self.t.kind = 26
+         self.t.kind = 25
       elif lit == ".":
-         self.t.kind = 27
+         self.t.kind = 26
 
 
    def NextToken( self ):
@@ -338,10 +338,52 @@ class Scanner(object):
                self.t.kind = 5
                done = True
          elif state == 5:
-            if (self.ch >= '0' and self.ch <= '9'):
+            if (self.ch <= '&'
+                 or self.ch >= '(' and self.ch <= '['
+                 or self.ch >= ']' and ord(self.ch) <= 255 or ord(self.ch) > 256):
                buf += unicode(self.ch)
                self.NextCh()
                state = 5
+            elif ord(self.ch) == 39:
+               buf += unicode(self.ch)
+               self.NextCh()
+               state = 6
+            elif ord(self.ch) == 92:
+               buf += unicode(self.ch)
+               self.NextCh()
+               state = 10
+            else:
+               self.t.kind = Scanner.noSym
+               done = True
+         elif state == 6:
+            self.t.kind = 6
+            done = True
+         elif state == 7:
+            if (self.ch <= '!'
+                 or self.ch >= '#' and self.ch <= '['
+                 or self.ch >= ']' and ord(self.ch) <= 255 or ord(self.ch) > 256):
+               buf += unicode(self.ch)
+               self.NextCh()
+               state = 7
+            elif self.ch == '"':
+               buf += unicode(self.ch)
+               self.NextCh()
+               state = 8
+            elif ord(self.ch) == 92:
+               buf += unicode(self.ch)
+               self.NextCh()
+               state = 11
+            else:
+               self.t.kind = Scanner.noSym
+               done = True
+         elif state == 8:
+            self.t.kind = 7
+            done = True
+         elif state == 9:
+            if (self.ch >= '0' and self.ch <= '9'):
+               buf += unicode(self.ch)
+               self.NextCh()
+               state = 9
             elif (self.ch >= 'A' and self.ch <= 'Z'
                  or self.ch == '_'
                  or self.ch >= 'a' and self.ch <= 'z'):
@@ -351,15 +393,51 @@ class Scanner(object):
             elif self.ch == '.':
                buf += unicode(self.ch)
                self.NextCh()
-               state = 6
+               state = 12
             else:
                self.t.kind = 3
                done = True
-         elif state == 6:
+         elif state == 10:
+            if (self.ch <= '&'
+                 or self.ch >= '(' and self.ch <= '['
+                 or self.ch >= ']' and ord(self.ch) <= 255 or ord(self.ch) > 256):
+               buf += unicode(self.ch)
+               self.NextCh()
+               state = 5
+            elif ord(self.ch) == 39:
+               buf += unicode(self.ch)
+               self.NextCh()
+               state = 13
+            elif ord(self.ch) == 92:
+               buf += unicode(self.ch)
+               self.NextCh()
+               state = 10
+            else:
+               self.t.kind = Scanner.noSym
+               done = True
+         elif state == 11:
+            if (self.ch <= '!'
+                 or self.ch >= '#' and self.ch <= '['
+                 or self.ch >= ']' and ord(self.ch) <= 255 or ord(self.ch) > 256):
+               buf += unicode(self.ch)
+               self.NextCh()
+               state = 7
+            elif self.ch == '"':
+               buf += unicode(self.ch)
+               self.NextCh()
+               state = 14
+            elif ord(self.ch) == 92:
+               buf += unicode(self.ch)
+               self.NextCh()
+               state = 11
+            else:
+               self.t.kind = Scanner.noSym
+               done = True
+         elif state == 12:
             if (self.ch >= '0' and self.ch <= '9'):
                buf += unicode(self.ch)
                self.NextCh()
-               state = 6
+               state = 12
             elif (self.ch >= 'A' and self.ch <= 'Z'
                  or self.ch == '_'
                  or self.ch >= 'a' and self.ch <= 'z'):
@@ -369,52 +447,75 @@ class Scanner(object):
             else:
                self.t.kind = 3
                done = True
-         elif state == 7:
-            self.t.kind = 7
-            done = True
-         elif state == 8:
-            self.t.kind = 8
-            done = True
-         elif state == 9:
-            self.t.kind = 9
-            done = True
-         elif state == 10:
-            self.t.kind = 10
-            done = True
-         elif state == 11:
-            self.t.kind = 11
-            done = True
-         elif state == 12:
-            self.t.kind = 12
-            done = True
          elif state == 13:
-            self.t.kind = 13
-            done = True
-         elif state == 14:
-            self.t.kind = 14
-            done = True
-         elif state == 15:
-            self.t.kind = 25
-            done = True
-         elif state == 16:
-            if ord(self.ch) == 39:
+            if (self.ch <= '&'
+                 or self.ch >= '(' and self.ch <= '['
+                 or self.ch >= ']' and ord(self.ch) <= 255 or ord(self.ch) > 256):
                buf += unicode(self.ch)
                self.NextCh()
-               state = 8
-            elif self.ch == '"':
+               state = 5
+            elif ord(self.ch) == 39:
                buf += unicode(self.ch)
                self.NextCh()
-               state = 10
-            elif self.ch == '}':
-               buf += unicode(self.ch)
-               self.NextCh()
-               state = 12
+               state = 6
             elif ord(self.ch) == 92:
                buf += unicode(self.ch)
                self.NextCh()
-               state = 14
+               state = 10
             else:
-               self.t.kind = 15
+               self.t.kind = 6
+               done = True
+         elif state == 14:
+            if (self.ch <= '!'
+                 or self.ch >= '#' and self.ch <= '['
+                 or self.ch >= ']' and ord(self.ch) <= 255 or ord(self.ch) > 256):
+               buf += unicode(self.ch)
+               self.NextCh()
+               state = 7
+            elif self.ch == '"':
+               buf += unicode(self.ch)
+               self.NextCh()
+               state = 8
+            elif ord(self.ch) == 92:
+               buf += unicode(self.ch)
+               self.NextCh()
+               state = 11
+            else:
+               self.t.kind = 7
+               done = True
+         elif state == 15:
+            self.t.kind = 9
+            done = True
+         elif state == 16:
+            self.t.kind = 10
+            done = True
+         elif state == 17:
+            self.t.kind = 11
+            done = True
+         elif state == 18:
+            self.t.kind = 12
+            done = True
+         elif state == 19:
+            self.t.kind = 13
+            done = True
+         elif state == 20:
+            self.t.kind = 24
+            done = True
+         elif state == 21:
+            if self.ch == '}':
+               buf += unicode(self.ch)
+               self.NextCh()
+               state = 16
+            elif self.ch == '%':
+               buf += unicode(self.ch)
+               self.NextCh()
+               state = 17
+            elif ord(self.ch) == 92:
+               buf += unicode(self.ch)
+               self.NextCh()
+               state = 19
+            else:
+               self.t.kind = 14
                done = True
 
       self.t.val = buf

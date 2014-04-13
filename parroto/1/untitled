@@ -1,0 +1,65 @@
+\documentclass[12pt,twoside]{book}%
+\title{Dummy Text}
+\author{Undefined Author}
+\date{}
+
+
+
+\begin{document}%
+\maketitle{}%
+\chapter{First chapter}%
+
+Starting text - Part A.
+{
+aaabbb
+}%
+
+{
+\centering%
+\section{Section One}%
+
+Starting text - Part B.
+\subsection{Subsection 1.1}%
+\label{x}%
+
+Starting text - Part C.
+
+
+}
+%
+\section{Section Two}%
+
+Starting text - Part D.
+{\label{Inner example}aaa}
+External \ref{x}%
+part\pageref{x}%
+x
+\subsection{Subsection 2.1}%
+
+Starting text - Part E.
+%
+
+{
+\raggedleft%
+\subsection{Subsection 2.2}%
+
+Starting text - Part F.
+
+
+}
+%
+\subsection{Subsection 2.3}%
+
+Starting text - Part G.
+\section{Section Three}%
+
+Starting text - Part H.
+\chapter{Second chapter}%
+
+Starting text - Part I.
+\section{Section Second-One}%
+
+Starting text - Part J.
+
+%
+\end{document}

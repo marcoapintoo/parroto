@@ -120,6 +120,23 @@ class Counters(object):
     def change_length_value(counter, value):
         return LatexBase.single_command("setlength", text=[counter, value])
         
+
+class Dimensions(object):
+    @staticmethod
+    @returns(str)
+    @accepts(name=str)
+    def create_dimension(name):
+        return LatexBase.single_command("newdimen") + LatexBase.single_command(name)
+
+    @staticmethod
+    @returns(str)
+    @accepts(counter=str, value=str)
+    def change_dimension_value(counter, value):
+        return "{name}={value}".format(
+            name=LatexBase.single_command(counter),
+            value=value)
+            
+    
 class Quotes(object):
     quotes_start = ("`", "``", "``", ",,", "<<")
     quotes_end = ("'", "''", '"', "''", ">>")
@@ -222,10 +239,10 @@ class Fonts(object):
     
     @staticmethod
     @returns(LatexBase)
-    @accepts(color=str)
-    def LineUnderline():
+    @accepts(text=str)
+    def LineUnderline(text):
         return LatexBase(
-            content=LatexBase.single_command("Underline", text=""),
+            content=LatexBase.single_command("Underline", text=text),
             require=LatexRequire(
                 name="umoline",
             )
@@ -233,10 +250,10 @@ class Fonts(object):
         
     @staticmethod
     @returns(LatexBase)
-    @accepts(color=str)
-    def LineMidline():
+    @accepts(text=str)
+    def LineMidline(text):
         return LatexBase(
-            content=LatexBase.single_command("Midline", text=""),
+            content=LatexBase.single_command("Midline", text=text),
             require=LatexRequire(
                 name="umoline",
             )
@@ -244,10 +261,10 @@ class Fonts(object):
         
     @staticmethod
     @returns(LatexBase)
-    @accepts(color=str)
-    def LineOverline():
+    @accepts(text=str)
+    def LineOverline(text):
         return LatexBase(
-            content=LatexBase.single_command("Overline", text=""),
+            content=LatexBase.single_command("Overline", text=text),
             require=LatexRequire(
                 name="umoline",
             )
@@ -258,15 +275,49 @@ class Fonts(object):
     @accepts(color=str)
     def LineAnyline(height, text):
         return LatexBase(
-            content=LatexBase.single_command("Overline", text=[height, text]),
+            content=LatexBase.single_command("UMOline", text=[height, text]),
             require=LatexRequire(
                 name="umoline",
             )
         )
-    
-
+            
+    @staticmethod
+    @returns(LatexBase)
+    @accepts(angle=str, text=str)
+    def rotating_text(angle, text):
+        return LatexBase(
+            content=LatexBase.single_command("rotatebox", text=[angle, text], named_params={"origin": "c"}),
+            # content=LatexBase.environment_command("rotate", text=text, text_params=[angle]),
+            require=LatexRequire(
+                name="rotating",
+            )
+        )
         
         
+class TextColor(object):    
+    @staticmethod
+    @returns(LatexBase)
+    @accepts()
+    def textcolor_unnamed(colortype, color, text):
+        return LatexBase(
+            content=LatexBase.single_command("textcolor", text=[color, text], params=[colortype]),
+            require=LatexRequire(
+                name="xcolor",
+                arguments=["usenames", "dvipsnames", "svgnames", "table", "x11names"]
+            )
+        )
+        
+    @staticmethod
+    @returns(LatexBase)
+    @accepts()
+    def color_unnamed(colortype, color):
+        return LatexBase(
+            content=LatexBase.single_command("color", text=[color], params=[colortype]),
+            require=LatexRequire(
+                name="xcolor",
+                arguments=["usenames", "dvipsnames", "svgnames", "table", "x11names"]
+            )
+        )
 
 class DocumentStructure(object):    
     @staticmethod
@@ -683,7 +734,72 @@ def new_line(size, allow_page_break=True):
     return LatexBase(
         content=TextSpace.HorizontalSpace("0pt") + "\\" + ("" if allow_page_break else "*") + LatexBase.format_command_params([size], {})
     )
+
+class WordSpacing(object):
+    default_stretch_name = "originwordstretch"
+    default_expand_name = "originwordspace"
+    @staticmethod
+    @returns(str)
+    @accepts()
+    def prepare_dimensions():
+        result = WordSpacing.create_dimensions()
+        result += "%\n"
+        result += WordSpacing.base_dimensions()
+        result += "%\n" 
+        return result
     
+    @staticmethod
+    @returns(str)
+    @accepts()
+    def base_dimensions():
+        result = Dimensions.change_dimension_value(WordSpacing.default_stretch_name, LatexBase.single_command("fontdimen2") + LatexBase.single_command("font"))
+        result += "%\n"
+        result += Dimensions.change_dimension_value(WordSpacing.default_expand_name, LatexBase.single_command("fontdimen2") + LatexBase.single_command("font"))
+        return result
+    
+    @staticmethod
+    @returns(str)
+    @accepts()
+    def create_dimensions():
+        result = Dimensions.create_dimension(WordSpacing.default_stretch_name)
+        result += "%\n"
+        result += Dimensions.create_dimension(WordSpacing.default_expand_name)
+        return result
+        
+    @staticmethod
+    @returns(str)
+    @accepts(proportion=str)
+    def code_stretch(proportion):
+        result = Dimensions.change_dimension_value(r"fontdimen2\font", LatexBase.single_command(WordSpacing.default_expand_name))
+        result += "%\n"
+        result += Dimensions.change_dimension_value(r"fontdimen3\font", proportion)
+        result += "%\n"
+        return result
+    
+    @staticmethod
+    @returns(str)
+    @accepts(proportion=str)
+    def code_expand(proportion):
+        result = Dimensions.change_dimension_value(r"fontdimen3\font", LatexBase.single_command(WordSpacing.default_stretch_name))
+        result += "%\n"
+        result += Dimensions.change_dimension_value(r"fontdimen2\font", proportion)
+        result += "%\n"
+        return result
+    
+    @staticmethod
+    @returns(str)
+    @accepts(proportion=str)
+    def text_space(proportion=None, expand=True, create=False):
+        if proportion:
+            return LatexBase(
+                content=WordSpacing.code_expand(proportion) if expand else WordSpacing.code_stretch(proportion)
+            )
+        return LatexBase(
+            content=WordSpacing.prepare_dimensions() if create else WordSpacing.code_expand("\\" + WordSpacing.default_expand_name) 
+        )
+    
+    
+
 @returns(LatexBase)
 @accepts(text=str)
 def VerbatimText(text):

@@ -20,7 +20,7 @@ class LabelAttribute(OneShotAttribute):
 
 
 class Label(Entity):
-    def translate(self, node):
+    def translate(self, node, unordered=False):
         # print node, node._element
         text = self.traverse_subnodes(node)
         # raw_input("..")
@@ -33,7 +33,7 @@ class Label(Entity):
 
 
 class Reference(Entity):
-    def translate(self, node):
+    def translate(self, node, unordered=False):
         # print node, node._element
         attributes = self.get_attributes(node)
         #reftype = str(attributes.get("type", "reference")).lower()

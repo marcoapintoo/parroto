@@ -180,12 +180,14 @@ class MetaElement(object):
         
         if handler:
             # self.set_modified(False)
-            if order >= handlerinfo.order and self.is_modified():
+            #print order is None
+            if order >= handlerinfo.order and self.is_modified() or order is None:
 #                if is_a(handler, HeadingDocument):
 #                    print handler
                 # raw_input(self._element.tag_name()+((":"+self._element.html()) if self._element.tag_name()=="label" else ""))
                 self.set_modified(False, propagate=False)
-                self.set_translated_value(handler.translate(self))
+                #print order
+                self.set_translated_value(handler.translate(self, unordered=order is None))
             # return ""
         return self.translated_value()
         

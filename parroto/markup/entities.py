@@ -7,14 +7,18 @@ if __name__ == u"__main__":
     
 from common import AutoInitObject
 
-         
+class AttributesEntityDict(dict):
+    def value(self, key, default = None):
+        val = self.get(key, default)
+        return str(val) if val is not None else None
         
 class Entity(object):  # (NativeObjectAttr):
+    order_activated = True
     def as_inline(self, node, content):
         name = node.parent().name()
         return content + ("" if name == u"text" else "%\n")
     
-    def translate(self, node):
+    def translate(self, node, unordered=False):
         # node.normalize()
         return self.traverse_attributes(node, self.get_attributes(node), self.traverse_subnodes(node)) 
     
@@ -26,17 +30,23 @@ class Entity(object):  # (NativeObjectAttr):
         
         orders = sorted(set(child.handler(get_info=True).order for child in node.subnodes()))
 
+        if not Entity.order_activated:
+            return self.traverse_sequence_subnodes(node, separator=separator, order=None)
+        
         for order in orders:
             result = self.traverse_sequence_subnodes(node, separator=separator, order=order)
         # result = self._traverse_child_iterative(node, separator=separator, order=-1e100)
         # result = self._traverse_child_iterative(node, separator=separator, order=0)
-        # result = self._traverse_child_iterative(node, separator=separator, order=1)
+        #UNPREDICTABLE:
+        #result = self.traverse_sequence_subnodes(node, separator=separator, order=None)
+        
         return result
         
     def traverse_sequence_subnodes(self, node, separator="", order=1e100):
         # r = [(child.html(), child.execute(order=order)) for child in node.subnodes()]
         # o = separator.join(orr[1] for orr in r)
         # o = separator.join(child.execute(order=order) for child in node.subnodes())
+        #print " ".join(repr(child._element) for child in node.subnodes())
         # print "--->", o
         return separator.join(child.execute(order=order) for child in node.subnodes())
     
@@ -62,7 +72,7 @@ class Entity(object):  # (NativeObjectAttr):
         orders = sorted(set(child.handler(get_info=True).order for child in node.attributes()))
 
         for order in orders:
-            attributes = dict(
+            attributes = AttributesEntityDict(
                 (child.name().lower(), AttributeEntityValue(
                     value=child.execute(order=order),
                     handler=child.handler(),
@@ -142,7 +152,7 @@ class RootDocument(Entity):
 class AttributeEntity(Entity):
     attribute_owner_applied = None
     
-    def translate(self, node):
+    def translate(self, node, unordered=False):
         # node.normalize()
         # print "##", node._element, node.text(), node.html(), ">>"
         # if "bold" in node.html(): raw_input("b")
@@ -194,7 +204,7 @@ class OneShotAttribute(AttributeEntity):
     
 
 class TextDocument(Entity):
-    def translate(self, node):
+    def translate(self, node, unordered=False):
         text = self.traverse_subnodes(node)
         if text == u"":
             text = node.text(raw=True)

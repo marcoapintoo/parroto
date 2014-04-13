@@ -122,7 +122,7 @@ class DefinedMacro(Entity):
     def add(self, name, macro_handler):
         self.handlers[name] = macro_handler
     
-    def translate(self, node):
+    def translate(self, node, unordered=False):
         node.prepare_native_property("_executed", False)
         if node._executed:
             return node.translated_value()
@@ -186,7 +186,7 @@ class Define(Entity):
         self.module = module
         self.macro_manager = DefinedMacro()
         
-    def translate(self, node):
+    def translate(self, node, unordered=False):
         # DANGEROUS:
         code_text = self.traverse_subnodes(node)
         # code_text = "".join(subnode.text() for subnode in node.subnodes())

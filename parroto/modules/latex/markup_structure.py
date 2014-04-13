@@ -12,17 +12,19 @@ from .base import LatexEntity as Entity
 
 class Root(RootDocument):
     # packages = []
-    def translate(self, node):
+    def translate(self, node, unordered=False):
         # self.get_native_attribute(node, "packages_data", [])
         # content += LatexRequire.merge_packages_declaration(Root.packages)
 
         content = RootDocument.translate(self, node)
         
         # packages = Entity.get_attribute(node, "packages", [])
+        node.prepare_native_property("initial_code", [])
+        initial_code = node.initial_code
         node.prepare_native_property("packages", [])
         packages = node.packages
         content_packages = LatexRequire.merge_packages_declaration(packages) + "\n"
-        # print content_packages
+        content_packages += "".join(initial_code)
         
         infonode = node.find("document-information")[0]
         infocontent = infonode.handler().translate_node(infonode)
@@ -33,7 +35,7 @@ class Root(RootDocument):
     
 
 class DocumentInformation(Entity):
-    def translate(self, node):
+    def translate(self, node, unordered=False):
         return ""
     
     def translate_node(self, node):
@@ -41,7 +43,7 @@ class DocumentInformation(Entity):
         content = ""
         content += DocumentStructure.document_class(
             unicode(attributes.get("type", "")),
-            params = self.split_argument(attributes, "type-params"))+"%\n"
+            params=self.split_argument(attributes, "type-params")) + "%\n"
         content += DocumentStructure.title(unicode(attributes.get("title", ""))) + "\n"
         content += DocumentStructure.author(unicode(attributes.get("author", ""))) + "\n"
         content += DocumentStructure.date(unicode(attributes.get("date", ""))) + "\n"
@@ -86,7 +88,7 @@ class DocumentInformation(Entity):
         return ret
 
 class DocumentStyle(Entity):
-    def translate(self, node):
+    def translate(self, node, unordered=False):
         attributes = self.get_attributes(node)
         targetname = unicode(attributes.get("apply-to", "document"))
         # print "TARGET", targetname, attributes
@@ -104,7 +106,7 @@ class HeadingDocument(Entity):
     labels = {"document":-1, "part":0, "chapter":1, "section":2, "subsection":3, "subsubsection":4, "paragraph":4, "subparagraph":5}
     label = ""
     is_switch = True
-    def translate(self, node):
+    def translate(self, node, unordered=False):
         if self.label == "":
             self.label = [label for label, level in HeadingDocument.labels.items() if level == self.level][0]
         for child in node.nextAll():
@@ -112,6 +114,10 @@ class HeadingDocument(Entity):
                 child.appendTo(node)
             else:
                 break
+        node.prepare_native_property("_was_executed", False)
+        if not node._was_executed:
+            node._was_executed = True
+            node.before(Entity.create(name="text", content="\n%\n"))
         attributes = self.get_attributes(node)
         subnode_content = self.traverse_subnodes(node)
         content = ""

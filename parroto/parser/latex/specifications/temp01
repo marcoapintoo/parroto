@@ -139,7 +139,9 @@ class Parser( object ):
    _number = 3
    _numunit = 4
    _spaces = 5
-   maxT = 28
+   _string1 = 6
+   _string2 = 7
+   maxT = 27
 
    T          = True
    x          = False
@@ -244,16 +246,22 @@ class Parser( object ):
       elif self.la.kind == 1:
          self.Get( )
          val += self.token.val 
-      elif self.la.kind == 6:
+      elif self.la.kind == 8:
          self.Get( )
          val += self.token.val 
       else:
-         self.SynErr(29)
+         self.SynErr(28)
       return val
 
    def TextString( self ):
       val = u"" 
-      if self.la.kind == 7:
+      if self.la.kind == 6:
+         self.Get( )
+         val += eval("u"+self.token.val); 
+      elif self.la.kind == 7:
+         self.Get( )
+         val += eval("u"+self.token.val); 
+      elif self.la.kind == 9:
          self.Get( )
          while self.StartOf(1):
             if self.StartOf(2):
@@ -262,60 +270,35 @@ class Parser( object ):
             elif self.la.kind == 5:
                self.Get( )
                val += self.token.val 
-            else:
-               self.Get( )
-               val += u"'" 
-
-         self.Get( )
-      elif self.la.kind == 9:
-         self.Get( )
-         while self.StartOf(3):
-            if self.StartOf(4):
-               self.Get()
-               val += self.token.val 
-            elif self.la.kind == 5:
-               self.Get( )
-               val += self.token.val 
-            else:
-               self.Get( )
-               val += '"' 
-
-         self.Get( )
-      elif self.la.kind == 11:
-         self.Get( )
-         while self.StartOf(5):
-            if self.StartOf(6):
-               self.Get()
-               val += self.token.val 
-            elif self.la.kind == 5:
-               self.Get( )
-               val += self.token.val 
-            else:
+            elif self.la.kind == 10:
                self.Get( )
                val += '}' 
+            else:
+               self.Get( )
+               val += '%' 
 
-         self.Expect(13)
-      elif self.StartOf(7):
+         self.Expect(12)
+      elif self.StartOf(3):
          val = self.AnyTextChar()
          v = u""; 
-         while self.StartOf(7):
+         while self.StartOf(3):
             v = self.AnyTextChar()
             val += v; 
 
       else:
-         self.SynErr(30)
+         self.SynErr(29)
       return val
 
    def Syntax( self ):
       cmd = u""; txt = u""; 
-      while self.StartOf(8):
-         if self.la.kind == 15:
+      while self.StartOf(4):
+         if self.la.kind == 14:
             cmd = self.Command()
             txt += cmd 
          elif self.la.kind == 5:
             self.Get( )
             txt += self.token.val; 
-         elif self.la.kind == 14:
+         elif self.la.kind == 13:
             self.Get( )
             txt += u"\\"; 
          else:
@@ -327,18 +310,18 @@ class Parser( object ):
 
    def Command( self ):
       cmd = u"" 
-      self.Expect(15)
-      while not (self.StartOf(9)):
-         self.SynErr(31)
+      self.Expect(14)
+      while not (self.StartOf(5)):
+         self.SynErr(30)
          self.Get()
       if (self.la.kind == 5):
          self.Get( )
-      if self.la.kind == 2 or self.la.kind == 11:
+      if self.la.kind == 2 or self.la.kind == 9:
          cmd = self.SimpleCommand()
-      elif self.la.kind == 16 or self.la.kind == 17 or self.la.kind == 18:
+      elif self.la.kind == 15 or self.la.kind == 16 or self.la.kind == 17:
          cmd = self.ExtendedCommand()
       else:
-         self.SynErr(32)
+         self.SynErr(31)
       return cmd
 
    def SimpleCommand( self ):
@@ -348,13 +331,13 @@ class Parser( object ):
       if (self.la.kind == 5):
          self.Get( )
          spaceval = self.token.val 
-      if (self.la.kind == 22):
+      if (self.la.kind == 21):
          args = self.ArgumentExpression()
          spaceval = u"" 
       if (self.la.kind == 5):
          self.Get( )
          spaceval = self.token.val 
-      if (self.la.kind == 11):
+      if (self.la.kind == 9):
          content = self.TextArguments()
          spaceval = u""; 
       cmd = u"<{name} {args}>{content}</{name}>{spaceval}".format(name=name, args=args, content=content, spaceval=spaceval) 
@@ -370,17 +353,17 @@ class Parser( object ):
       if (self.la.kind == 5):
          self.Get( )
          content = self.token.val 
-      if (self.la.kind == 22):
+      if (self.la.kind == 21):
          args = self.ArgumentExpression()
          content = u"" 
-      while self.StartOf(8):
-         if self.StartOf(10):
+      while self.StartOf(4):
+         if self.StartOf(6):
             self.Get()
             content += self.token.val; 
          elif self.la.kind == 5:
             self.Get( )
             content += self.token.val; 
-         elif self.la.kind == 14:
+         elif self.la.kind == 13:
             self.Get( )
             content += u"\\"; 
          else:
@@ -389,7 +372,7 @@ class Parser( object ):
             content += cmd 
 
       cmd = u"<{name} {args}>{content}</{name}>".format(name=name, args=args, content=content) 
-      self.Expect(15)
+      self.Expect(14)
       if (self.la.kind == 5):
          self.Get( )
       self.EndToken()
@@ -400,42 +383,45 @@ class Parser( object ):
       if self.la.kind == 2:
          id = self.Identifier()
          value += id 
-      elif self.la.kind == 11:
+      elif self.la.kind == 9:
          self.Get( )
          id = self.Identifier()
          value += id 
-         self.Expect(13)
+         self.Expect(12)
       else:
-         self.SynErr(33)
+         self.SynErr(32)
       return value
 
    def ArgumentExpression( self ):
-      self.Expect(22)
+      self.Expect(21)
       if (self.la.kind == 5):
          self.Get( )
-      if (self.StartOf(11)):
+      if (self.StartOf(7)):
          macro = self.ArgumentParameters()
       if (self.la.kind == 5):
          self.Get( )
-      self.Expect(23)
+      self.Expect(22)
       return macro
 
    def TextArguments( self ):
       txt = u""
-      self.Expect(11)
+      self.Expect(9)
       if (self.la.kind == 5):
          self.Get( )
          txt += self.token.val; 
-      while self.StartOf(5):
-         if self.StartOf(12):
+      while self.StartOf(1):
+         if self.StartOf(8):
             self.Get()
             txt += self.token.val; 
-         elif self.la.kind == 12:
+         elif self.la.kind == 10:
             self.Get( )
             txt += self.token.val; 
-         elif self.la.kind == 14:
+         elif self.la.kind == 13:
             self.Get( )
             txt += u"\\"; 
+         elif self.la.kind == 11:
+            self.Get( )
+            txt += u"%"; 
          elif self.la.kind == 5:
             self.Get( )
             txt += self.token.val; 
@@ -443,38 +429,38 @@ class Parser( object ):
             cmd = self.Command()
             txt += cmd 
 
-      self.Expect(13)
+      self.Expect(12)
       return txt
 
    def BeginToken( self ):
-      if self.la.kind == 16:
+      if self.la.kind == 15:
+         self.Get( )
+      elif self.la.kind == 16:
          self.Get( )
       elif self.la.kind == 17:
          self.Get( )
-      elif self.la.kind == 18:
-         self.Get( )
       else:
-         self.SynErr(34)
+         self.SynErr(33)
       if (self.la.kind == 5):
          self.Get( )
-      self.Expect(6)
+      self.Expect(8)
 
    def EndToken( self ):
-      if self.la.kind == 19:
+      if self.la.kind == 18:
+         self.Get( )
+      elif self.la.kind == 19:
          self.Get( )
       elif self.la.kind == 20:
          self.Get( )
-      elif self.la.kind == 21:
-         self.Get( )
       else:
-         self.SynErr(35)
+         self.SynErr(34)
 
    def Identifier( self ):
       value = u"" 
       self.Expect(2)
       value += self.token.val 
-      while self.la.kind == 6 or self.la.kind == 27:
-         if self.la.kind == 6:
+      while self.la.kind == 8 or self.la.kind == 26:
+         if self.la.kind == 8:
             self.Get( )
             value += u"-" 
          else:
@@ -491,8 +477,8 @@ class Parser( object ):
       index += (1 if arg.startswith("argument-") else 0); args += arg; 
       if (self.la.kind == 5):
          self.Get( )
-      while self.StartOf(13):
-         while self.la.kind == 26:
+      while self.StartOf(9):
+         while self.la.kind == 25:
             self.Get( )
 
          if (self.la.kind == 5):
@@ -511,8 +497,8 @@ class Parser( object ):
       args = self.TextString()
       if (self.la.kind == 5):
          self.Get( )
-      if (self.la.kind == 24 or self.la.kind == 25):
-         if self.la.kind == 24:
+      if (self.la.kind == 23 or self.la.kind == 24):
+         if self.la.kind == 23:
             self.Get( )
          else:
             self.Get( )
@@ -536,20 +522,16 @@ class Parser( object ):
 
 
    set = [
-      [T,x,T,x, x,T,x,x, x,x,x,T, x,x,x,x, T,T,T,x, x,x,x,x, x,x,x,x, x,x],
-      [x,T,T,T, T,T,T,x, T,T,T,T, T,T,T,T, T,T,T,T, T,T,T,T, T,T,T,T, T,x],
-      [x,T,T,T, T,x,T,x, x,T,T,T, T,T,T,T, T,T,T,T, T,T,T,T, T,T,T,T, T,x],
-      [x,T,T,T, T,T,T,T, T,x,T,T, T,T,T,T, T,T,T,T, T,T,T,T, T,T,T,T, T,x],
-      [x,T,T,T, T,x,T,T, T,x,x,T, T,T,T,T, T,T,T,T, T,T,T,T, T,T,T,T, T,x],
-      [x,T,T,T, T,T,T,T, T,T,T,T, T,x,T,T, T,T,T,T, T,T,T,T, T,T,T,T, T,x],
-      [x,T,T,T, T,x,T,T, T,T,T,T, x,x,T,T, T,T,T,T, T,T,T,T, T,T,T,T, T,x],
-      [x,T,T,T, x,x,T,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x],
-      [x,T,T,T, T,T,T,T, T,T,T,T, T,T,T,T, T,T,T,T, T,T,T,T, T,T,T,T, T,x],
-      [T,x,T,x, x,T,x,x, x,x,x,T, x,x,x,x, T,T,T,x, x,x,x,x, x,x,x,x, x,x],
-      [x,T,T,T, T,x,T,T, T,T,T,T, T,T,x,x, T,T,T,T, T,T,T,T, T,T,T,T, T,x],
-      [x,T,T,T, x,x,T,T, x,T,x,T, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x],
-      [x,T,T,T, T,x,T,T, T,T,T,T, x,x,x,x, T,T,T,T, T,T,T,T, T,T,T,T, T,x],
-      [x,T,T,T, x,T,T,T, x,T,x,T, x,x,x,x, x,x,x,x, x,x,x,x, x,x,T,x, x,x]
+      [T,x,T,x, x,T,x,x, x,T,x,x, x,x,x,T, T,T,x,x, x,x,x,x, x,x,x,x, x],
+      [x,T,T,T, T,T,T,T, T,T,T,T, x,T,T,T, T,T,T,T, T,T,T,T, T,T,T,T, x],
+      [x,T,T,T, T,x,T,T, T,T,x,x, x,T,T,T, T,T,T,T, T,T,T,T, T,T,T,T, x],
+      [x,T,T,T, x,x,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x],
+      [x,T,T,T, T,T,T,T, T,T,T,T, T,T,T,T, T,T,T,T, T,T,T,T, T,T,T,T, x],
+      [T,x,T,x, x,T,x,x, x,T,x,x, x,x,x,T, T,T,x,x, x,x,x,x, x,x,x,x, x],
+      [x,T,T,T, T,x,T,T, T,T,T,T, T,x,x,T, T,T,T,T, T,T,T,T, T,T,T,T, x],
+      [x,T,T,T, x,x,T,T, T,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x],
+      [x,T,T,T, T,x,T,T, T,T,x,x, x,x,x,T, T,T,T,T, T,T,T,T, T,T,T,T, x],
+      [x,T,T,T, x,T,T,T, T,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,T,x,x, x]
 
       ]
 
@@ -561,36 +543,35 @@ class Parser( object ):
       3 : "number expected",
       4 : "numunit expected",
       5 : "spaces expected",
-      6 : "\"-\" expected",
-      7 : "\"\'\" expected",
-      8 : "\"\\\\\'\" expected",
-      9 : "\"\"\" expected",
-      10 : "\"\\\\\"\" expected",
-      11 : "\"{\" expected",
-      12 : "\"\\\\}\" expected",
-      13 : "\"}\" expected",
-      14 : "\"\\\\\\\\\" expected",
-      15 : "\"\\\\\" expected",
-      16 : "\"start\" expected",
-      17 : "\"Start\" expected",
-      18 : "\"START\" expected",
-      19 : "\"stop\" expected",
-      20 : "\"Stop\" expected",
-      21 : "\"STOP\" expected",
-      22 : "\"[\" expected",
-      23 : "\"]\" expected",
-      24 : "\":\" expected",
-      25 : "\"=\" expected",
-      26 : "\",\" expected",
-      27 : "\".\" expected",
-      28 : "??? expected",
-      29 : "invalid AnyTextChar",
-      30 : "invalid TextString",
-      31 : "this symbol not expected in Command",
-      32 : "invalid Command",
-      33 : "invalid CommandName",
-      34 : "invalid BeginToken",
-      35 : "invalid EndToken",
+      6 : "string1 expected",
+      7 : "string2 expected",
+      8 : "\"-\" expected",
+      9 : "\"{\" expected",
+      10 : "\"\\\\}\" expected",
+      11 : "\"\\\\%\" expected",
+      12 : "\"}\" expected",
+      13 : "\"\\\\\\\\\" expected",
+      14 : "\"\\\\\" expected",
+      15 : "\"start\" expected",
+      16 : "\"Start\" expected",
+      17 : "\"START\" expected",
+      18 : "\"stop\" expected",
+      19 : "\"Stop\" expected",
+      20 : "\"STOP\" expected",
+      21 : "\"[\" expected",
+      22 : "\"]\" expected",
+      23 : "\":\" expected",
+      24 : "\"=\" expected",
+      25 : "\",\" expected",
+      26 : "\".\" expected",
+      27 : "??? expected",
+      28 : "invalid AnyTextChar",
+      29 : "invalid TextString",
+      30 : "this symbol not expected in Command",
+      31 : "invalid Command",
+      32 : "invalid CommandName",
+      33 : "invalid BeginToken",
+      34 : "invalid EndToken",
       }
 
 

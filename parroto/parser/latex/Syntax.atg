@@ -21,6 +21,8 @@ TOKENS
 	number     = digit { digit } [ "." { digit }] .
 	numunit    = digit { digit } [ "." { digit }] ( "_" | letter) { "_" | letter | digit } .
 	spaces     = space {space}.
+	string1   =  "'" {noquote1 | "\\'" } "'".
+	string2   =  '"' {noquote2 | '\\"' } '"' .
 	/*
 	string     =  "'" {noquote1 | "\\'" } "'" | '"' {noquote2 | '\\"' } '"' .
 	quotechar  = "'" | '"'.*/
@@ -45,7 +47,9 @@ PRODUCTIONS
 		|	"-"										(. val += self.token.val .)
 		.
 	TextString<out val>								(. val = u"" .)
-		=	"'"										(. .)
+		=	string1									(. val += eval("u"+self.token.val); .)
+		|	string2									(. val += eval("u"+self.token.val); .)
+			/*"'"										(. .)
 			{ ANY									(. val += self.token.val .)
 			| spaces								(. val += self.token.val .)
 			| "\\'"									(. val += u"'" .)
@@ -57,10 +61,12 @@ PRODUCTIONS
 			| '\\"'									(. val += '"' .)
 			}
 			'"'										(. .)
+			*/
 		|	'{'										(. .)
 			{ ANY									(. val += self.token.val .)
 			| spaces								(. val += self.token.val .)
 			| '\\}'									(. val += '}' .)
+			| '\\%'									(. val += '%' .)
 			}
 			'}'										(. .)
 		|	AnyTextChar<out val>					(. v = u""; .)
@@ -173,6 +179,7 @@ PRODUCTIONS
 				ANY										(. txt += self.token.val; .)
 				| "\\}"									(. txt += self.token.val; .)
 				| "\\\\"								(. txt += u"\\"; .)
+				| "\\%"									(. txt += u"%"; .)
 				| spaces								(. txt += self.token.val; .)
 				| Command<out cmd>						(. txt += cmd .)
 			}

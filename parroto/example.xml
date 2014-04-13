@@ -1,0 +1,314 @@
+<document-file><document-information>
+<document-information.type>book</document-information.type>
+<document-information.type-params>12pt;twoside</document-information.type-params>
+<document-information.title>Dummy Text</document-information.title>
+<document-information.author>Undefined Author</document-information.author>
+</document-information>
+<text>
+
+</text>
+<define>
+<define.macro>anothervalue</define.macro>
+<text>myname is</text>
+</define>
+<text>
+
+</text>
+<define>
+<define.macro>complexname</define.macro>
+<define.name>John</define.name>
+<define.familyname>Smith</define.familyname>
+<define.title>Dr.</define.title>
+<text>
+	complexname += macro(name="anothervalue")
+	complexname += " "
+	complexname += u"[{title} {familyname} {name}]".format(
+			title = title, 
+			familyname = familyname,
+			name = name
+		)
+</text>
+</define>
+<text>
+
+</text>
+<style>
+<style.apply-to>#zz</style.apply-to>
+<text>
+    </text>
+<style.font-weight>
+<text>bold</text>
+</style.font-weight>
+<text>
+    </text>
+<style.label>
+<text>bold-label</text>
+</style.label>
+<text>
+</text>
+</style>
+<text>
+
+</text>
+<style>
+<style.apply-to>#xyz</style.apply-to>
+<text>
+    </text>
+<style.alignment>
+<text>right</text>
+</style.alignment>
+<text>
+</text>
+</style>
+<text>
+
+</text>
+<style>
+<style.apply-to>#overlined</style.apply-to>
+<text>
+	</text>
+<style.text-line>
+<text>overline</text>
+</style.text-line>
+<text>
+	</text>
+<style.text-rotating>
+<text>-30</text>
+</style.text-rotating>
+<text>
+	</text>
+<style.line-height>
+<text>common</text>
+</style.line-height>
+<text>
+</text>
+</style>
+<text>
+
+</text>
+<style>
+<style.apply-to>#texta</style.apply-to>
+<text>
+    </text>
+<style.word-spacing>
+<text>12pt</text>
+</style.word-spacing>
+<text>
+</text>
+</style>
+<text>
+
+</text>
+<style>
+<style.apply-to>#textb</style.apply-to>
+<text>
+    </text>
+<style.word-spacing>
+<text>10pt</text>
+</style.word-spacing>
+<text>
+</text>
+</style>
+<text>
+
+</text>
+<style>
+<style.apply-to>#textc</style.apply-to>
+<text>
+    </text>
+<style.word-spacing>
+<text>8pt</text>
+</style.word-spacing>
+<text>
+</text>
+</style>
+<text>
+
+</text>
+<style>
+<style.apply-to>#textd</style.apply-to>
+<text>
+    </text>
+<style.text-color>
+<text>50%rgb(201 201 100 light = 0.04)</text>
+</style.text-color>
+<text>
+</text>
+</style>
+<text>
+
+</text>
+<text><text>
+%
+</text></text><document>
+<text>
+
+</text>
+<maketitle>
+</maketitle>
+<text>
+
+</text>
+<text><text>
+%
+</text></text><WordSpacingAttribute_before><text>12pt</text><WordSpacingAttribute_before.__id>2</WordSpacingAttribute_before.__id></WordSpacingAttribute_before><chapter id="texta"><chapter.word-spacing>12pt</chapter.word-spacing><chapter.title>First chapter</chapter.title>
+<chapter.id>texta</chapter.id>
+<text>
+Starting text - Part A.
+</text>
+<text id="texta1">
+<text.id>texta1</text.id>
+<text>
+	A1
+	</text>
+<text id="textb1">
+<text.id>textb1</text.id>
+<text>
+		B1
+		</text>
+<text id="textd"><text.text-color>50%rgb(201 201 100 light = 0.04)</text.text-color><text.id>textd</text.id>
+<text>
+			C1
+		</text>
+</text>
+<text>
+		B2
+	</text>
+</text>
+<text>
+	A2
+</text>
+</text>
+<text>
+
+
+
+
+
+
+
+</text>
+<complexname>
+<complexname.name>Juan</complexname.name>
+<complexname.familyname>Pérez</complexname.familyname>
+<complexname.title>Mr.</complexname.title>
+</complexname>
+<text><text><text><text><anothervalue><text/></anothervalue><text><text>myname is</text></text></text></text><text><text> </text></text><text><text>[Mr. Pérez Juan]</text></text></text></text><text>
+</text>
+<text>
+<text.or>3</text.or>
+<text.argument-1>44</text.argument-1>
+<text.argument-0>ABC</text.argument-0>
+<text>
+aaabbbé
+</text>
+</text>
+<text>
+</text>
+<text><text>
+%
+</text></text><section>
+<section.title>Section One</section.title>
+<section.align>center</section.align>
+<text>
+</text>
+<text id="overlined"><text.text-rotating>-30</text.text-rotating><text.text-line>overline</text.text-line><text.line-height>common</text.line-height><text.id>overlined</text.id>
+<text>Overlines</text>
+</text>
+<text>: Starting text - Part B: </text>
+<complexname>
+<complexname.name>Juan</complexname.name>
+<complexname.familyname>Pérez</complexname.familyname>
+</complexname>
+<text><text><text><text><anothervalue><text/></anothervalue><text><text>myname is</text></text></text></text><text><text> </text></text><text><text>[Dr. Pérez Juan]</text></text></text></text><text> and </text>
+<complexname>
+<complexname.name>Juan</complexname.name>
+</complexname>
+<text><text><text><text><anothervalue><text/></anothervalue><text><text>myname is</text></text></text></text><text><text> </text></text><text><text>[Dr. Smith Juan]</text></text></text></text><text>
+</text>
+<text><text>
+%
+</text></text><subsection><label><text>x</text></label>
+<subsection.title>Subsection 1.1</subsection.title>
+<subsection.label>x</subsection.label>
+<text>
+Starting text - Part C.
+</text>
+<text><text>
+%
+</text></text><WordSpacingAttribute_before><text>10pt</text><WordSpacingAttribute_before.__id>1</WordSpacingAttribute_before.__id></WordSpacingAttribute_before></subsection>
+</section>
+<section id="textb"><section.word-spacing>10pt</section.word-spacing><section.title>Section Two</section.title>
+<section.id>textb</section.id>
+<text>
+Starting text - Part D.
+</text>
+<text id="zz"><text.font-weight>bold</text.font-weight><label><text>Inner example</text></label>
+<text.id>zz</text.id>
+<text.label>bold-label</text.label><text>aaa</text>
+</text>
+<text>
+External </text>
+<ref>
+<text>x</text>
+</ref>
+<text>part</text>
+<ref>
+<ref.type>page</ref.type>
+<text>x</text>
+</ref>
+<text>x
+</text>
+<text><text>
+%
+</text></text><subsection>
+<subsection.title>Subsection 2.1</subsection.title>
+<text>
+Starting text - Part E.
+</text>
+<text><text>
+%
+</text></text></subsection>
+<subsection id="xyz"><subsection.alignment>right</subsection.alignment><subsection.title>Subsection 2.2</subsection.title>
+<subsection.id>xyz</subsection.id>
+<text>
+Starting text - Part F.
+</text>
+<text><text>
+%
+</text></text><WordSpacingAttribute_before><text>8pt</text><WordSpacingAttribute_before.__id>0</WordSpacingAttribute_before.__id></WordSpacingAttribute_before></subsection>
+<subsection id="textc"><subsection.word-spacing>8pt</subsection.word-spacing><subsection.title>Subsection 2.3</subsection.title>
+<subsection.id>textc</subsection.id>
+<text>
+Starting text - Part G.
+</text>
+<text><text>
+%
+</text></text><WordSpacingAttribute_after><text>8pt</text><WordSpacingAttribute_after.__id>0</WordSpacingAttribute_after.__id></WordSpacingAttribute_after><WordSpacingAttribute_after><text>10pt</text><WordSpacingAttribute_after.__id>1</WordSpacingAttribute_after.__id></WordSpacingAttribute_after></subsection>
+</section>
+<section>
+<section.title>Section Three</section.title>
+<text>
+Starting text - Part H.
+</text>
+<text><text>
+%
+</text></text><WordSpacingAttribute_after><text>12pt</text><WordSpacingAttribute_after.__id>2</WordSpacingAttribute_after.__id></WordSpacingAttribute_after></section>
+</chapter>
+<chapter>
+<chapter.title>Second chapter</chapter.title>
+<text>
+Starting text - Part I.
+</text>
+<text><text>
+%
+</text></text><section>
+<section.title>Section Second-One</section.title>
+<text>
+Starting text - Part J.
+
+</text>
+</section>
+</chapter>
+</document>
+</document-file>

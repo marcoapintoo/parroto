@@ -11,8 +11,9 @@ from .base import LatexEntity as Entity, TextDocument
 from .markup_references import Label, LabelAttribute, Reference
 from .markup_alignment import AlignmentAttribute
 from .markup_structure import Root, DocumentInformation, DocumentStyle, HeadingDocument
-from .markup_font import FontWeightAttribute, FontStyleAttribute, FontVariantAttribute, FontLineAttribute
+from .markup_font import FontWeightAttribute, FontStyleAttribute, FontVariantAttribute, FontLineAttribute, WordSpacingAttribute, TextRotateAttribute
 from .markup_paragraph import LineHeightAttribute
+from .markup_color import TextColorAttribute
 from .markup_macros import Define
 
 class LatexModule(HandlerModule):
@@ -33,7 +34,11 @@ class LatexModule(HandlerModule):
         
         self.add_handler("text", TextDocument(), order=0)
         
-        
+        self.add_attribute("text-color", TextColorAttribute(), order=0)
+        self.add_attribute("text-rotating", TextRotateAttribute(), order=20990)
+        self.add_attribute("text-rotate", TextRotateAttribute(), order=20990)
+        self.add_attribute("text-rotates", TextRotateAttribute(), order=20990)
+        self.add_attribute("word-spacing", WordSpacingAttribute(self), order=20990)
         self.add_attribute("line-height", LineHeightAttribute(), order=0)
         self.add_attribute("paragraph-height", LineHeightAttribute(), order=0)
         self.add_attribute("text-line", FontLineAttribute(), order=0)
