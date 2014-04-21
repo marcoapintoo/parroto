@@ -37,10 +37,12 @@ def is_callable(obj):
     return hasattr(obj, "__call__")
 
 
-def is_method(obj):
+def is_method(obj, strict=False):
     """
     Checking íf an object is a method: function or class/static/object method.
     """
+    if strict:
+        return is_a(obj, types.MethodType)
     return is_a(obj, types.FunctionType, types.MethodType, staticmethod, classmethod)
 
 
