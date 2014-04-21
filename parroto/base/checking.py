@@ -29,6 +29,9 @@ class ParameterCondition(dict):
     def __init__(self, *args, **kwargs):
         dict.__init__(self, *args, **kwargs)
 
+    def has_condition(self):
+        return self.condition_keyword in self
+
     def match(self, parameters, this_class=None, strict=True, raise_error=False, messages=None):
         """
         Verify if signature matches with parameters sent.
@@ -45,7 +48,7 @@ class ParameterCondition(dict):
         semantic_message = ""
         for parameter, expected_types in self.items():
             if parameter == self.condition_keyword and self.enable_condition_keyword:
-                result = eval(expected_types, globals(), {})
+                result = eval(expected_types, globals(), parameters)
                 if not result:
                     semantic_message = "Semantic predicate '{expected_types}' " \
                                        "with result '{result}' is not valid.".format(**locals())

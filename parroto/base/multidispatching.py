@@ -41,19 +41,41 @@ class MultiMethodPool(object):
         :return:
         """
         callers = self.registry.get(name, [])
-        targets = [caller for condition, caller in callers
-                   if condition.match(TypeVerifier.get_call_parameters(caller, args, kwargs, strict=False),
-                                      this_class=this_class,
-                                      strict=True)]
+        targets = [(condition, caller) for condition, caller in callers
+                   if condition.match(
+                TypeVerifier.get_call_parameters(caller, args, kwargs, strict=False),
+                this_class=this_class,
+                strict=True)]
         if len(targets) != 1:
-            targets = [caller for condition, caller in callers
-                       if condition.match(TypeVerifier.get_call_parameters(caller, args, kwargs, strict=False),
-                                          this_class=this_class,
-                                          strict=False)]
-        if len(targets) > 0:
-            caller = targets[-1]
+            targets = [(condition, caller) for condition, caller in callers
+                       if condition.match(
+                    TypeVerifier.get_call_parameters(caller, args, kwargs, strict=False),
+                    this_class=this_class,
+                    strict=False)]
+        if len(targets) > 1:
+            targets = [(condition, caller) for condition, caller in targets
+                       if condition.has_condition()] or targets
+
+        if len(targets) == 1:
+            caller = targets[0][1]
             return caller
-        raise TypeError("No method for that")
+        elif len(targets) > 1:
+            raise TypeError("Several methods for these parameters: {}({},{}):\n{}".format(
+                name,
+                ",".join(str(o) for o in (args[1:] if this_class else args)),
+                ",".join("{}={}".format(k, v) for k, v in kwargs.items()),
+                "\n".join(MultiMethodPool.function_signature(o, name) for _, o in targets)))
+        raise TypeError("No method for these parameters: {}({},{})".format(
+            name,
+            ",".join(str(o) for o in (args[1:] if this_class else args)),
+            ",".join("{}={}".format(k, v) for k, v in kwargs.items())))
+
+    @staticmethod
+    def function_signature(func, name=None):
+        return "{name}() in {filename} at {line} line.".format(
+            name=name or func.func_code.co_name,
+            filename=func.func_code.co_filename,
+            line=func.func_code.co_firstlineno)
 
 
 class MultiMethodVerifier(TypeVerifier):
@@ -113,6 +135,22 @@ if __name__ == "__main__":
         def method_name(self, variable, a=12, b=0, c=7, **d):
             print "Calling result:", (variable ** 2)
 
+        @multimethod(variable=int, when="variable < 5")
+        def method_name(self, variable, a=12, b=0, c=7, **d):
+            print "Calling result (<5):", (variable ** 2)
+
+        @multimethod(variable=int, when="variable > 15")
+        def method_name(self, variable, a=12, b=0, c=7, **d):
+            print "Calling result (>15):", (variable ** 2)
+
+        @multimethod(variable=int)
+        def method_name(self, variable, a=12, b=0, c=7, **d):
+            print "Calling result (otherwise):", (variable ** 2)
+
+        @multimethod(variable=int)
+        def method_name(self, variable, a=12, b=0, c=7, **d):
+            print "Calling result (otherwise2):", (variable ** 2)
+
         @multimethod(variable=str)
         def method_name(self, variable, a=12, b=0, c=7, **d):
             print "Calling result (double string):", (variable * 2)
@@ -132,9 +170,12 @@ if __name__ == "__main__":
 
 
     f = FooTest()
+    f.method_name(20)
+    f.method_name(10)
+    f.method_name(1)
     f.method_name(121.1, 1)  # ,4,6,67,7)
     f.method_name("x", 1)  # ,4,6,67,7)
     f.method_name(B(), 1)  # ,4,6,67,7)
     # f.method_name()
     # f.method_name("+")
-    #f.method_name(12.5)
+    # f.method_name(12.5)
