@@ -75,7 +75,41 @@ class AutoObject(type):
         """
         names, varargs, keywords, defaults = inspect.getargspec(init)
         if keywords:
+            init(obj, *args, **kwargs)
+        else:
             named_args = dict((k, v) for k, v in kwargs.items() if k in names)
             init(obj, *args, **named_args)
-        else:
-            init(obj, *args)
+
+
+class NativeAttribute(object):
+    """
+    Attribute member for native objects, like lxml objects.
+    """
+    __metaclass__ = AutoObject
+    __temporal_ref__ = []
+    repository = lambda self, o: o.handler()
+    key = lambda self, o: o
+    name = u"native_attribute"
+    default = None
+
+    def __get__(self, instance, owner):
+        handler = self.repository(instance)
+        id_key = self.__create__(instance)
+        return getattr(handler, "__native_" + self.name).setdefault(id_key, self.default)
+
+    def __set__(self, instance, value):
+        handler = self.repository(instance)
+        id_key = self.__create__(instance)
+        getattr(handler, "__native_" + self.name)[id_key] = value
+
+    def __delete__(self, instance):
+        raise Exception("Not implemented")
+
+    def __create__(self, instance):
+        handler = self.repository(instance)
+        attr = getattr(handler, "__native_" + self.name, {})
+        setattr(handler, "__native_" + self.name, attr)
+        obj = self.key(instance)
+        # Trick with Python's garbage collector:
+        NativeAttribute.__temporal_ref__.append(obj)
+        return id(obj)
