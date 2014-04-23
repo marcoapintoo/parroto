@@ -9,17 +9,7 @@ from functools import wraps
 if __name__ == "__main__":
     sys.path.append(os.path.join(os.path.dirname(os.path.realpath(sys.argv[0])), "../"))
 
-from parroto.base import is_iterable
-
-
-class NeutralObject(object):
-    """
-    Neutral object for comparisons.
-    It is an alternative to None at checking process.
-    """
-    pass
-neutral = NeutralObject()
-
+from parroto.base import is_iterable, neutral
 
 class ParameterCondition(dict):
     ThisClass = "<<this>>"

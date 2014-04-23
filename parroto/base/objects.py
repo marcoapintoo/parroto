@@ -81,6 +81,18 @@ class AutoObject(type):
             init(obj, *args, **named_args)
 
 
+class NeutralObject(object):
+    """
+    Neutral object for comparisons.
+    It is an alternative to None at checking process.
+    """
+    pass
+
+
+neutral = NeutralObject()
+del NeutralObject
+
+
 class NativeAttribute(object):
     """
     Attribute member for native objects, like lxml objects.
@@ -113,3 +125,20 @@ class NativeAttribute(object):
         # Trick with Python's garbage collector:
         NativeAttribute.__temporal_ref__.append(obj)
         return id(obj)
+
+
+class NativeAutoAttributeObject(object):
+    _native_key = lambda self, o: o
+
+    def __init_native_attribute(self, name, default):
+        obj = getattr(type(self), name, neutral)
+        if obj == neutral:
+            setattr(type(self), name, NativeAttribute(name=name, default=default, key=type(self)._native_key))
+
+    def __setattr__(self, name, value):
+        self.__init_native_attribute(name, None)
+        object.__setattr__(self, name, value)
+
+    def __getattr__(self, name):
+        self.__init_native_attribute(name, None)
+        return object.__getattribute__(self, name)
