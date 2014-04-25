@@ -1,0 +1,255 @@
+from parroto.interpreter.languages.meta import Element
+COMPILER Syntax
+   document = None
+   positions_mark = []
+   def mark_line(self):
+      self.positions_mark.append(self.token.pos + len(self.token.val))
+   def clear_marks(self):
+      self.positions_mark = []
+   def is_command_token(self):
+      token = self.token.next
+      post_token = self.token.next.next
+      return token.value=="\\" and post_token.value not in ["stop", "Stop", "STOP"]
+   def add_command(self, element, cmd, txt):
+      self.add_text(element, txt)
+      element.children.append(cmd)
+   def add_text(self, element, txt):
+      if txt != "":
+          element.children.append(txt)
+   def add_code(self, cmd):
+      self.mark_line()
+      formatter = lambda portion: "" if not portion else (portion[1:] if portion[0].isalnum() else portion)
+      position_end = self.token.pos + len(self.token.val)
+      portions = [self.scanner.buffer.buf[self.positions_mark[i]: self.positions_mark[i+1]] for i in range(0, len(self.positions_mark)-1)]
+      if len(portions) == 1:
+          cmd["__code__"] = formatter(repr(portions[0]))
+      else:
+          cmd["__code__"] = ""
+          for portion in portions:
+              cmd["__code__"].children.append(formatter(repr(portion)))
+
+
+
+CHARACTERS
+    letter   = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" .
+    digit    = "0123456789" .
+    common   = "|!#$%&/?-.,;:*[]()".
+    noquote1 = ANY - "'".
+    noquote2 = ANY - '"'.
+    space    = CHR(9) .. CHR(13) + " ".
+    macros   = ANY - "\n".
+
+TOKENS
+    symbols    = common { common }.
+    identifier = ( "_" | letter) { "_" | letter | digit } .
+    number     = digit { digit } [ "." { digit }] .
+    numunit    = digit { digit } [ "." { digit }] ( "_" | letter) { "_" | letter | digit } .
+    spaces     = space {space}.
+    string1    =  "'" {noquote1 | "\\'" } "'".
+    string2    =  '"' {noquote2 | '\\"' } '"'.
+
+
+
+COMMENTS
+    FROM "\\#" TO "\n"
+COMMENTS
+    FROM "%" TO "\n"
+COMMENTS
+    FROM "%*" TO "*%"
+
+/*
+IGNORE
+    CHR(9) .. CHR(13)
+*/
+
+PRODUCTIONS
+
+
+    Syntax                                              (. element = Element(name=u"document-file"); cmd = u""; txt = u""; .)
+        =
+        {   Command<out cmd>                            (. self.add_command(element, cmd, txt); txt = u""; .)
+        |   spaces                                      (. txt += self.token.val;  .)
+        |   CommandEscapeMark                           (. txt += self.token.val[1:]; .)
+        |   ANY                                         (. txt += self.token.val; print self.token.val;  .)
+        }
+        EOF
+        (. self.add_text(element, txt) .)
+        (. self.document = element; .)
+        .
+    Command<out cmd>                                    (. self.clear_marks(); self.mark_line(); .)
+        =   CommandMark
+            SYNC [spaces]
+            (   SimpleCommand<out cmd>
+            |   ExtendedCommand<out cmd>
+            )
+        .
+    SimpleCommand<out cmd>                              (. cmd = Element(); content = u""; spaceval = "";.)
+        =   CommandName<out name>                       (. cmd.name = name.replace("_", "").lower() .)
+            [spaces                                     (. spaceval = self.token.val; .) ]
+                                                        (. self.mark_line(); .)
+            [
+                ArgumentExpression<cmd>                 (. spaceval = u"" .)
+            ]
+            [spaces                                     (. spaceval = self.token.val; .) ]
+                                                        (. self.mark_line(); .)
+            [
+                TextArguments<out content>              (. self.add_text(cmd,content); spaceval = u""; .)
+            ]
+            (. self.add_code(cmd) .)
+            (. cmd.children.append(spaceval) .)
+        .
+    ExtendedCommand<out cmd>                            (. cmd = Element(); name = u""; args = u""; content = u""; .)
+        =   BeginToken
+            [spaces]
+            CommandName<out name>                       (. cmd.name = name.replace("_", "").lower() .)
+            [spaces                                     (. content = self.token.val; .) ]
+                                                        (. self.mark_line(); .)
+            [
+                ArgumentExpression<cmd>                 (. content = u"" .)
+            ]
+                                                        (. self.mark_line(); .)
+            {   ANY                                     (. content += self.token.val; .)
+            |   spaces                                  (. content += self.token.val; .)
+            |   CommandEscapeMark                       (. content += self.token.val[1:]; .)
+            |   (. if not self.is_command_token(): break .)
+                Command<out cmd>                        (. self.add_command(element, cmd, txt); content = u""; .)
+            }
+            CommandMark [spaces] EndToken
+            (. self.add_text(cmd, content) .)
+            (. self.add_code(cmd) .)
+            (. cmd.children.append(content) .)
+        .
+    ArgumentExpression<cmd>
+        =   ArgumentStartMark
+            [spaces]
+            [ ArgumentParameters<cmd> ]
+            [spaces]
+            ArgumentEndMark
+        .
+    ArgumentParameters<cmd>                             (. index = 0; .)
+        =   ArgumentParameter<cmd, index>               (. index += (1 if arg.startswith("argument-") else 0) .)
+            [spaces]
+            {   {ArgumentSeparatorMark}
+                [spaces]
+                ArgumentParameter<cmd, index>           (. index += (1 if arg.startswith("argument-") else 0) .)
+                [spaces]
+            }
+            [spaces]
+        .
+    ArgumentParameter<cmd, index>                       (. args = u""; temp = u""; name = u"argument-{0}".format(index); .)
+        =   TextString<out args>
+            [spaces]
+            [
+                ArgumentKeyMark
+                [spaces]
+                TextString<out temp>                    (. name, args = args, temp; .)
+                                                        (. if not name.replace("-","").isalnum(): raise Exception("Invalid parameter name "+name); .)
+            ]
+            (. cmd[name] = args .)
+        .
+
+/*****************
+* LANGUAGE MARKS *
+******************/
+    CommandMark
+        =   "\\".
+    CommandEscapeMark
+        =   "\\\\".
+
+    ArgumentStartMark
+        =   "[".
+    ArgumentEndMark
+        =   "]".
+    ArgumentSeparatorMark
+        =   ",".
+    ArgumentKeyMark
+        =   ("="|":").
+
+    IdentifierStartMark
+        =   "{".
+    IdentifierEndMark
+        =   "}".
+
+    TextArgumentStartMark
+        =   "{".
+    TextArgumentEndMark
+        =   "}".
+    TextArgumentEndEscapeMark
+        =   "\\}".
+
+    KeyStringStartMark
+        =   "{".
+    KeyStringEndMark
+        =   "}".
+    KeyStringEndEscapeMark
+        =   "\\}".
+
+    BeginToken
+        =    ("start" | "Start" | "START") [spaces] "-".
+    EndToken
+        =    ("stop" | "Stop" | "STOP").
+/*************
+* IDENTIFIER *
+**************/
+    Identifier<out value>
+        =    identifier                                 (. value = self.token.val .)
+            {
+                ('-' | '.' | identifier)                (. value += self.token.val .)
+            }
+        .
+    CommandName<out value>
+        =   Identifier<out value>
+        |   IdentifierStartMark
+            Identifier<out value>
+            IdentifierEndMark
+        .
+/*********************
+* TEXT WITH COMMANDS *
+**********************/
+    TextArguments<out txt>                              (. txt = u"" .)
+        =   TextArgumentStartMark
+            {   (ANY | spaces)                          (. txt += self.token.val .)
+            |
+                (   TextArgumentEndEscapeMark
+                |   CommandEscapeMark
+                |   "\\%" )     (. txt += self.token.val[1:] .)
+            |   Command<out cmd>                        (. txt += cmd .)
+            }
+            TextArgumentEndMark
+    .
+
+/*******************
+* STRINGS HANDLERS *
+********************/
+    TextString<out value>                               (. value = u"" .)
+        =    CommonString<out value>
+        |    KeyString<out value>
+        |    AnyTextString<out value>
+        .
+    AnyTextString<out value>                            (. value = u"" .)
+        =   AnyTextChar<out value>                      (. v = u""; .)
+            {
+                AnyTextChar<out v>                      (. value += v; .)
+            }
+        .
+    AnyTextChar<out value>
+        =    (identifier | number | symbols)      (. value = self.token.val .)
+        .
+    KeyString<out value>                                (. value = u"" .)
+        =   KeyStringStartMark
+            {   (ANY | spaces)                          (. value += self.token.val .)
+            |
+                (   KeyStringEndEscapeMark
+                |   '\\%')                              (. value += self.token.val[1:] .)
+            }
+            KeyStringEndMark
+        .
+    CommonString<out value>                             (. value = u"" .)
+        =    (string1 | string2)                        (. value += eval("u"+self.token.val); .)
+        .
+
+END Syntax.
+
+
+
+

@@ -1,0 +1,155 @@
+from colors import Color
+COMPILER Syntax
+    color = None
+IGNORECASE
+CHARACTERS
+	letter   = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" .
+	digit    = "0123456789".
+	space    = CHR(9) .. CHR(13) + " ".
+	hexdigit = "0123456789ABCDEF".
+
+TOKENS
+	identifier = ( "_" | letter) { "_" | letter | digit } .
+	number     = digit { digit } [ "." { digit }] .
+	spaces     = space {space}.
+	hexcolor   = "#" hexdigit hexdigit hexdigit hexdigit hexdigit hexdigit.
+	hexalphacolor = "#" hexdigit hexdigit hexdigit hexdigit hexdigit hexdigit hexdigit hexdigit.
+
+COMMENTS
+	FROM "/*" TO "*/"
+/*
+COMMENTS
+	FROM "%" TO "\n"
+COMMENTS
+	FROM "%*" TO "*%"
+*/
+IGNORE
+	space
+
+PRODUCTIONS
+	Syntax											(. color = None; .)
+		=	ColorOperation<out color>
+		EOF
+		(. self.color = color .)
+		.
+	
+	ColorOperation<out color>						(. color = None; other = None; .)
+		=	Color<out color>
+		{
+			AddingColor<out other>					(. color = color.add(other); .)
+		|	MultiplyingColor<out other>				(. color = color.multiply(other); .)
+		}
+		.
+	AddingColor<out color>
+		=	"+" ColorOperation<out color>
+		.
+	MultiplyingColor<out color>
+		=	("*"|"-") ColorOperation<out color>
+		.
+	Color<out color>								(. color = Color(); value = 0; .)
+		=	Percentage<out value>					(. color.modify("percentage", value); .)
+			BaseColor<color>
+		|	BaseColor<color>
+		.
+	Percentage<out value>
+		=	number									(. value = float(self.token.val)/100.0; .)
+			"%"
+		.
+	BaseColor<color>
+		=	ColorDefinition<color>
+		|	NamedColor<color>
+		.
+	NamedColor<color>										(. .)
+		=	ColorParametersNamedColor<color>
+		|	"("
+			ColorParametersNamedColor<color>
+			")"
+		.
+	ColorDefinition<color>
+		=	ColorFormatNumeric								(. format = self.token.val; .)
+			(
+				ColorParametersNumeric<color, format>
+			|	"("
+				ColorParametersNumeric<color, format>
+				")"
+			)
+		|	ColorFormatHexColor
+			(
+				ColorParametersHexColor<color>
+			|	"("
+				ColorParametersHexColor<color>
+				")"
+			)
+		.
+	ColorFormatNumeric
+		=	"rgb"
+		|	"rgb256"
+		|	"uniformed_rgb"
+		|	"uniformed-rgb"
+		|	"linear_rgb"
+		|	"linear-rgb"
+		|	"hsl"
+		|	"hsv"
+		|	"cmy"
+		|	"cmyk"
+		.
+	ColorFormatHexColor
+		=	"html"
+		|	"hex"
+		.
+	ColorParametersNumeric<color, format>
+		=	number							(. value = [float(self.token.val)] .)
+		{
+			{","}
+			number 							(. value.append(float(self.token.val)) .)
+		}
+		(. color.set_value(value, format) .)
+		{
+			{","}
+			ColorModifier<color>
+		}
+		.
+	ColorParametersHexColor<color>
+		=	(	hexcolor
+			|	hexalphacolor
+			)								(. color.set_value(eval(self.token.val), "hex") .)
+		{
+			{","}
+			ColorModifier<color>
+		}
+		.
+	ColorName<out name>					(. name = "" .)
+	    =   identifier					(. name = self.token.val; .)
+	    |   "["
+	        {
+	            ANY						(. name += self.token.val; .)
+	        }
+	        "]"
+	    .
+	ColorParametersNamedColor<color>	(. name = "" .)
+		=	ColorName<out name>			(. color.named_color(name) .)
+		{
+			{","}
+			ColorModifier<color>
+		}
+		.
+	ColorModifier<color>					(. name=""; value=""; .)
+		=	identifier						(. name = self.token.val; .)
+			[
+				("="|":")
+				(	number						(. value = float(self.token.val); .)
+				|	identifier					(. value = self.token.val; .)
+				)
+			]
+		(. color.modify(name, value); .)
+		.
+		
+END Syntax.
+
+
+
+/*
+10% red lighter: 0.2
+10% rgb(1,0,0, lighter:0.1) + 20% rgb(1,0,0)
+
+*/

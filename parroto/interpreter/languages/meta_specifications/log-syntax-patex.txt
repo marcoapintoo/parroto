@@ -1,0 +1,26 @@
+Coco/R for Python 2.7 - version 1.4.1 (built 2014-04-25 01:49:09 GMT) - Ported to Python by Ronald H Longo (ron_longo@verizon.net)
+
+checking
+  LL(1) warning in SimpleCommand: spaces is the start & successor of a deletable structure
+  LL(1) warning in SimpleCommand: "[" is the start & successor of a deletable structure
+  LL(1) warning in SimpleCommand: spaces is the start & successor of a deletable structure
+  LL(1) warning in SimpleCommand: "{" is the start & successor of a deletable structure
+  LL(1) warning in ExtendedCommand: spaces is the start & successor of a deletable structure
+  LL(1) warning in ExtendedCommand: "[" is the start & successor of a deletable structure
+  LL(1) warning in ExtendedCommand: "\\" is the start & successor of a deletable structure
+  LL(1) warning in ArgumentExpression: spaces is the start & successor of a deletable structure
+  LL(1) warning in ArgumentParameters: spaces is the start & successor of a deletable structure
+  LL(1) warning in ArgumentParameters: spaces is the start & successor of a deletable structure
+  LL(1) warning in ArgumentParameters: spaces is the start & successor of a deletable structure
+  LL(1) warning in ArgumentParameters: spaces is the start & successor of a deletable structure
+  LL(1) warning in ArgumentParameter: spaces is the start & successor of a deletable structure
+  LL(1) warning in Identifier: identifier is the start & successor of a deletable structure
+  LL(1) warning in Identifier: "-" is the start & successor of a deletable structure
+  LL(1) warning in Identifier: "." is the start & successor of a deletable structure
+  LL(1) warning in AnyTextString: symbols is the start & successor of a deletable structure
+  LL(1) warning in AnyTextString: identifier is the start & successor of a deletable structure
+  LL(1) warning in AnyTextString: number is the start & successor of a deletable structure
+parser + scanner + driver generated
+0 errors detected
+
+trace output is in trace.txt

@@ -1,0 +1,16 @@
+CommandMark,"@"
+CommandEscapeMark,"\\@"
+ArgumentStartMark,"("
+ArgumentEndMark,")"
+ArgumentSeparatorMark,","
+ArgumentKeyMark,("="|":")
+IdentifierStartMark,"{"
+IdentifierEndMark,"}"
+TextArgumentStartMark,"{"
+TextArgumentEndMark,"}"
+TextArgumentEndEscapeMark,"\\}"
+KeyStringStartMark,"("
+KeyStringEndMark,")"
+KeyStringEndEscapeMark,"\\)"
+BeginToken,("start" | "Start" | "START") [spaces] ":"
+EndToken,("stop" | "Stop" | "STOP")
