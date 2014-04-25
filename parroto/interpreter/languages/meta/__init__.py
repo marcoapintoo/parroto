@@ -1,1 +1,5 @@
-__author__ = 'marco'
+# !/usr/bin/python
+__author__ = 'Marco Antonio Pinto Orellana'
+
+from .element import *
+

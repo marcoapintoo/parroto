@@ -56,25 +56,31 @@ class MultiMethodPool(object):
             targets = [(condition, caller) for condition, caller in targets
                        if condition.has_condition()] or targets
 
+        if len(targets) > 1:
+            targets = [(condition, caller) for condition, caller in targets
+                       if condition.has_condition() or len(condition) > 0]
+
         if len(targets) == 1:
             caller = targets[0][1]
             return caller
+
         elif len(targets) > 1:
             raise TypeError("Several methods for these parameters: {}({},{}):\n{}".format(
                 name,
                 ",".join(str(o) for o in (args[1:] if this_class else args)),
                 ",".join("{}={}".format(k, v) for k, v in kwargs.items()),
-                "\n".join(MultiMethodPool.function_signature(o, name) for _, o in targets)))
+                "\n".join(MultiMethodPool.function_signature(o, name, c) for c, o in targets)))
         raise TypeError("No method for these parameters: {}({},{})".format(
             name,
             ",".join(str(o) for o in (args[1:] if this_class else args)),
             ",".join("{}={}".format(k, v) for k, v in kwargs.items())))
 
     @staticmethod
-    def function_signature(func, name=None):
-        return "{name}() in {filename} at {line} line.".format(
+    def function_signature(func, name=None, condition=None):
+        return "{name}({condition}) in {filename} at {line} line.".format(
             name=name or func.func_code.co_name,
             filename=func.func_code.co_filename,
+            condition=str(condition)[1:-1],
             line=func.func_code.co_firstlineno)
 
 
@@ -114,7 +120,7 @@ class MultiMethodVerifier(TypeVerifier):
 
         @wraps(func)
         def decorator(*args, **kwargs):
-            this_class = args[0] if args else None
+            this_class = type(args[0]) if args else None
             caller = MultiMethodVerifier.registry.matches(name, args, kwargs, this_class)
             return caller(*args, **kwargs)
 
@@ -163,6 +169,18 @@ if __name__ == "__main__":
         def method_name(self, variable, a=12, b=0, c=7, **d):
             print "Calling result (object parent):", variable.b
 
+        @multimethod()
+        def method_name_a(self, variable, a=12, b=0, c=7, **d):
+            print "Calling result (Default):"
+
+        @multimethod(variable=int)
+        def method_name_a(self, variable, a=12, b=0, c=7, **d):
+            print "Calling result (INT):"
+
+        @multimethod(variable=ParameterCondition.ThisClass)
+        def method_name_a(self, variable, a=12, b=0, c=7, **d):
+            print "Calling result (This):"
+
 
     @multimethod(variable=float)
     def func_name(self, variable, a=12, b=0, c=7, **d):
@@ -170,6 +188,9 @@ if __name__ == "__main__":
 
 
     f = FooTest()
+    f.method_name_a("x")
+    f.method_name_a(11)
+    f.method_name_a(f)
     f.method_name(20)
     f.method_name(10)
     f.method_name(1)

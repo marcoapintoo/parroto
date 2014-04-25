@@ -47,7 +47,7 @@ class ParameterCondition(dict):
             value = parameters[parameter]
             value_type = type(value)
             # is_type = isinstance(value, expected_types) if strict else issubclass(value_type, expected_types)
-            is_type = type(value) in expected_types if strict else issubclass(value_type, expected_types)
+            is_type = value_type in expected_types if strict else issubclass(value_type, expected_types)
             if not is_type:
                 message += "Parameter '{parameter}' with type {expected_types} " \
                            "expected. Value '{value}' ({value_type}) is not valid.".format(**locals())
@@ -235,7 +235,7 @@ class ParametersTypeVerifier(TypeVerifier):
         """
         messages = []
         match = self.type_list.match(self.call_parameters(args, kwargs),
-                                     this_class=args[0] if args else None,
+                                     this_class=type(args[0]) if args else None,
                                      strict=False,
                                      messages=messages)
         if not match:
@@ -261,14 +261,14 @@ class OutputTypeVerifier(TypeVerifier):
         :return:
         """
         result = self.target(*args, **kwargs)
-        required_types = self.type_list.get_types(self.return_type, this_class=args[0] if args else None)
+        required_types = self.type_list.get_types(self.return_type, this_class=type(args[0]) if args else None)
         if not isinstance(result, required_types):
             msg = self.warning_message(required_types, result, is_args=False)
             raise TypeError(msg)
         return result
 
 returns = OutputTypeVerifier
-
+ThisClass = ParameterCondition.ThisClass
 
 
 if __name__ == "__main__":
@@ -276,10 +276,11 @@ if __name__ == "__main__":
         b = 122
 
         @returns(None)
-        @accepts(a=(int, str))
+        @accepts(a=(int, str, ThisClass))
         def param1(self, a):
             print self.b, a, type(a)
 
     f = Foo()
     f.param1(12)
     f.param1("s--s")
+    f.param1(f)

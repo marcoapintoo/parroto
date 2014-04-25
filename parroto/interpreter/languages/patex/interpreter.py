@@ -51,7 +51,10 @@ class Interpreter(object):
 
 if __name__ == "__main__":
     interpreter = Interpreter()
-    print interpreter.process_text("\\example{\n"
-                                   r"content}")
-
+    element = interpreter.process_text(r"""
+\example{
+    content
+}
+""")
+    print element.xml_string
 
