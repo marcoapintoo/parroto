@@ -9,7 +9,7 @@ COMPILER Syntax
    def is_command_token(self):
       token = self.token.next
       post_token = self.token.next.next
-      return token.value=="\\" and post_token.value not in ["stop", "Stop", "STOP"]
+      return token.val=="\\" and post_token.val not in ["stop", "Stop", "STOP"]
    def add_command(self, element, cmd, txt):
       self.add_text(element, txt)
       element.children.append(cmd)
@@ -70,7 +70,7 @@ PRODUCTIONS
         {   Command<out cmd>                            (. self.add_command(element, cmd, txt); txt = u""; .)
         |   spaces                                      (. txt += self.token.val;  .)
         |   CommandEscapeMark                           (. txt += self.token.val[1:]; .)
-        |   ANY                                         (. txt += self.token.val; print self.token.val;  .)
+        |   ANY                                         (. txt += self.token.val;  .)
         }
         EOF
         (. self.add_text(element, txt) .)
@@ -95,7 +95,7 @@ PRODUCTIONS
             [
                 TextArguments<out content>              (. self.add_text(cmd,content); spaceval = u""; .)
             ]
-            (. self.add_code(cmd) .)
+            (. self.mark_line(); self.add_code(cmd) .)
             (. cmd.children.append(spaceval) .)
         .
     ExtendedCommand<out cmd>                            (. cmd = Element(); name = u""; args = u""; content = u""; .)
@@ -114,10 +114,11 @@ PRODUCTIONS
             |   (. if not self.is_command_token(): break .)
                 Command<out cmd>                        (. self.add_command(element, cmd, txt); content = u""; .)
             }
+            (. self.mark_line(); .)
             CommandMark [spaces] EndToken
             (. self.add_text(cmd, content) .)
             (. self.add_code(cmd) .)
-            (. cmd.children.append(content) .)
+            (. #cmd.children.append(content) .)
         .
     ArgumentExpression<cmd>
         =   ArgumentStartMark

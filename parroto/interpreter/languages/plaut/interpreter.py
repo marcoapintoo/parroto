@@ -14,15 +14,16 @@ import compiler
 class Interpreter(BaseInterpreter):
     compiler = compiler
 
+
 if __name__ == "__main__":
     interpreter = Interpreter()
     element = interpreter.process(r"""
-\example{
+@example{
     content
 }
-\start-example
+@start:example
     content2
-\stop
+@stop
 """)
     print element.xml_string
 

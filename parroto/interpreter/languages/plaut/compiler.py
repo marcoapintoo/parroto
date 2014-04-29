@@ -737,7 +737,7 @@ class Parser(object):
     def is_command_token(self):
         token = self.token.next
         post_token = self.token.next.next
-        return token.value == "\\" and post_token.value not in ["stop", "Stop", "STOP"]
+        return token.val == "\\" and post_token.val not in ["stop", "Stop", "STOP"]
 
     def add_command(self, element, cmd, txt):
         self.add_text(element, txt)
@@ -860,7 +860,6 @@ class Parser(object):
             else:
                 self.Get()
                 txt += self.token.val;
-                print self.token.val;
 
         self.Expect(0)
         self.add_text(element, txt)
@@ -910,6 +909,7 @@ class Parser(object):
             content = self.TextArguments()
             self.add_text(cmd, content);
             spaceval = u"";
+        self.mark_line();
         self.add_code(cmd)
         cmd.children.append(spaceval)
         return cmd
@@ -948,13 +948,14 @@ class Parser(object):
                 self.add_command(element, cmd, txt);
                 content = u"";
 
+        self.mark_line();
         self.CommandMark()
         if (self.la.kind == 5):
             self.Get()
         self.EndToken()
         self.add_text(cmd, content)
         self.add_code(cmd)
-        cmd.children.append(content)
+        #cmd.children.append(content) 
         return cmd
 
     def CommandName(self):
