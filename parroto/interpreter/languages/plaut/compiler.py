@@ -906,7 +906,7 @@ class Parser(object):
             spaceval = self.token.val;
         self.mark_line();
         if (self.la.kind == 15):
-            content = self.TextArguments()
+            content = self.TextArguments(cmd)
             self.add_text(cmd, content);
             spaceval = u"";
         self.mark_line();
@@ -979,7 +979,7 @@ class Parser(object):
             self.Get()
         self.ArgumentEndMark()
 
-    def TextArguments(self):
+    def TextArguments(self, element):
         txt = u""
         self.TextArgumentStartMark()
         while self.StartOf(5):
@@ -1003,7 +1003,8 @@ class Parser(object):
                 txt += self.token.val[1:]
             else:
                 cmd = self.Command()
-                txt += cmd
+                self.add_command(element, cmd, txt);
+                txt = u"";
 
         self.TextArgumentEndMark()
         return txt
@@ -1036,7 +1037,8 @@ class Parser(object):
 
     def ArgumentParameters(self, cmd):
         index = 0;
-        self.ArgumentParameter(cmd, index)
+        arg = "";
+        arg = self.ArgumentParameter(cmd, index)
         index += (1 if arg.startswith("argument-") else 0)
         if (self.la.kind == 5):
             self.Get()
@@ -1046,7 +1048,7 @@ class Parser(object):
 
             if (self.la.kind == 5):
                 self.Get()
-            self.ArgumentParameter(cmd, index)
+            arg = self.ArgumentParameter(cmd, index)
             index += (1 if arg.startswith("argument-") else 0)
             if (self.la.kind == 5):
                 self.Get()
@@ -1072,6 +1074,7 @@ class Parser(object):
             name, args = args, temp;
             if not name.replace("-", "").isalnum(): raise Exception("Invalid parameter name " + name);
         cmd[name] = args
+        return name
 
     def ArgumentSeparatorMark(self):
         self.Expect(12)
@@ -1180,15 +1183,16 @@ class Parser(object):
         return value
 
     def AnyTextChar(self):
-        if self.la.kind == 2:
-            self.Get()
-        elif self.la.kind == 3:
-            self.Get()
-        elif self.la.kind == 1:
-            self.Get()
+        if self.la.kind == 1 or self.la.kind == 3:
+            if self.la.kind == 3:
+                self.Get()
+            else:
+                self.Get()
+            value = self.token.val
+        elif self.la.kind == 2:
+            value = self.Identifier()
         else:
             self.SynErr(41)
-        value = self.token.val
         return value
 
 

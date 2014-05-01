@@ -1,4 +1,4 @@
-Coco/R for Python 2.7 - version 1.4.1 (built 2014-04-27 14:52:13 GMT) - Ported to Python by Ronald H Longo (ron_longo@verizon.net)
+Coco/R for Python 2.7 - version 1.4.1 (built 2014-05-01 15:31:09 GMT) - Ported to Python by Ronald H Longo (ron_longo@verizon.net)
 
 checking
   LL(1) warning in SimpleCommand: spaces is the start & successor of a deletable structure

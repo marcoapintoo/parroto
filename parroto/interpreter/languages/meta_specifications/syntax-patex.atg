@@ -93,7 +93,7 @@ PRODUCTIONS
             [spaces                                     (. spaceval = self.token.val; .) ]
                                                         (. self.mark_line(); .)
             [
-                TextArguments<out content>              (. self.add_text(cmd,content); spaceval = u""; .)
+                TextArguments<out content, cmd>         (. self.add_text(cmd,content); spaceval = u""; .)
             ]
             (. self.mark_line(); self.add_code(cmd) .)
             (. cmd.children.append(spaceval) .)
@@ -127,17 +127,17 @@ PRODUCTIONS
             [spaces]
             ArgumentEndMark
         .
-    ArgumentParameters<cmd>                             (. index = 0; .)
-        =   ArgumentParameter<cmd, index>               (. index += (1 if arg.startswith("argument-") else 0) .)
+    ArgumentParameters<cmd>                             (. index = 0; arg = ""; .)
+        =   ArgumentParameter<out arg, cmd, index>      (. index += (1 if arg.startswith("argument-") else 0) .)
             [spaces]
             {   {ArgumentSeparatorMark}
                 [spaces]
-                ArgumentParameter<cmd, index>           (. index += (1 if arg.startswith("argument-") else 0) .)
+                ArgumentParameter<out arg, cmd, index>  (. index += (1 if arg.startswith("argument-") else 0) .)
                 [spaces]
             }
             [spaces]
         .
-    ArgumentParameter<cmd, index>                       (. args = u""; temp = u""; name = u"argument-{0}".format(index); .)
+    ArgumentParameter<out name, cmd, index>             (. args = u""; temp = u""; name = u"argument-{0}".format(index); .)
         =   TextString<out args>
             [spaces]
             [
@@ -207,14 +207,14 @@ PRODUCTIONS
 /*********************
 * TEXT WITH COMMANDS *
 **********************/
-    TextArguments<out txt>                              (. txt = u"" .)
+    TextArguments<out txt, element>                     (. txt = u"" .)
         =   TextArgumentStartMark
             {   (ANY | spaces)                          (. txt += self.token.val .)
             |
                 (   TextArgumentEndEscapeMark
                 |   CommandEscapeMark
                 |   "\\%" )     (. txt += self.token.val[1:] .)
-            |   Command<out cmd>                        (. txt += cmd .)
+            |   Command<out cmd>                        (. self.add_command(element, cmd, txt); txt = u""; .)
             }
             TextArgumentEndMark
     .
@@ -234,7 +234,9 @@ PRODUCTIONS
             }
         .
     AnyTextChar<out value>
-        =    (identifier | number | symbols)      (. value = self.token.val .)
+        /*=    (identifier | number | symbols)      (. value = self.token.val .)*/
+        =    ( number | symbols)      (. value = self.token.val .)
+        |    Identifier<out value>
         .
     KeyString<out value>                                (. value = u"" .)
         =   KeyStringStartMark

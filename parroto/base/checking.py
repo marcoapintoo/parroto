@@ -4,6 +4,7 @@ __author__ = 'Marco Antonio Pinto Orellana'
 import os
 import sys
 import inspect
+import types
 from functools import wraps
 
 if __name__ == "__main__":
@@ -13,6 +14,8 @@ from parroto.base import is_iterable, neutral
 
 class ParameterCondition(dict):
     ThisClass = "<<this>>"
+    MethodType = types.MethodType
+    UnboundMethodType = types.UnboundMethodType
     condition_keyword = "when"
     enable_condition_keyword = False
 

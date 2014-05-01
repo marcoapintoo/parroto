@@ -88,6 +88,16 @@ class MultiMethodVerifier(TypeVerifier):
     registry = MultiMethodPool()
 
     @staticmethod
+    def format_name(class_name, function_name):
+        """
+        Format a function name with its class
+        :param class_name:
+        :param function_name:
+        :return:
+        """
+        return "{0}.{1}".format(class_name, function_name)
+
+    @staticmethod
     def add(name, condition, caller):
         """
         Stored a handler with a name and signature
@@ -106,6 +116,7 @@ class MultiMethodVerifier(TypeVerifier):
         """
         self.conditions = ParameterCondition(conditions)
         self.conditions.enable_condition_keyword = True
+        self.registered_name = ""
         super(MultiMethodVerifier, self).__init__(**conditions)
 
     def __call__(self, func):
@@ -115,7 +126,7 @@ class MultiMethodVerifier(TypeVerifier):
         :return:
         """
         self.settings(func)
-        name = "{0}.{1}".format(self.caller_name, self.function_name)
+        name = MultiMethodVerifier.format_name(self.caller_name, self.function_name)
         MultiMethodVerifier.add(name, self.conditions, func)
 
         @wraps(func)
@@ -129,12 +140,63 @@ class MultiMethodVerifier(TypeVerifier):
 
 multimethod = MultiMethodVerifier
 
+
+class MultiMethodDispatcher(object):
+    @staticmethod
+    @multimethod(method=str)
+    def extend(method, target, *others):
+        registry = MultiMethodVerifier.registry.registry
+        registry_key = lambda t, m: MultiMethodVerifier.format_name(type(t).__name__, m)
+        target_name = registry_key(target, method)
+        for other in others:
+            other_name = registry_key(other, method)
+            registry[target_name].extend(registry[other_name])
+        print registry[target_name]
+
+    @staticmethod
+    @multimethod(method=ParameterCondition.MethodType)
+    def extend(method, *others):
+        method_name = method.__name__
+        # target_name = method.im_class.__name__
+        target = method.im_self
+        MultiMethodDispatcher.extend(method_name, target, *others)
+
+
+multimethod.extend = staticmethod(MultiMethodDispatcher.extend)
+
 if __name__ == "__main__":
     class A(object):
         b = 10
 
     class B(A):
         b = 21
+
+    class BaseObject(object):
+        @multimethod(param=int)
+        def __call__(self, param):
+            print "VALUE, int", param
+
+        @multimethod(param=float)
+        def __call__(self, param):
+            print "VALUE, float", param
+
+
+    class ExtendedObject(object):
+        @multimethod(param=str)
+        def __call__(self, param):
+            print "VALUE, str", param
+
+        @multimethod(param=int)
+        def __call__(self, param):
+            print "VALUE, complex", param
+
+    c = BaseObject()
+    c(12)
+    c(0.3)
+    d = ExtendedObject()
+    multimethod.extend(c.__call__, d)
+    c("#")
+    c(12)
 
     class FooTest(object):
         @multimethod(variable=float)

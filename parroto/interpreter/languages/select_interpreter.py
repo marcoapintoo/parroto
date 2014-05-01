@@ -100,6 +100,22 @@ if __name__ == "__main__":
     interpreter = BaseSelector()
     element = interpreter.process(r"""
 #!compiler: patex
+#!/usr/bin/parroto
+#!compiler: patex
+
+
+
+\define[name=label,arguments={text: "",}]{
+    r"\label{{{text}}}".format(text)
+}
+\define-set[name=old_label, target=label]{}
+\define[name=label,arguments={text: "",}]{
+    print label #<- current string response
+    return old_label.use(text = text)
+}
+\oldlabel=\let\label
+\def\label#1{
+}
 
 \example{
     content
@@ -110,6 +126,7 @@ if __name__ == "__main__":
 \start-example
     content2
 \stop
+
 """)
     print element.xml_string
     print interpreter.instructions
