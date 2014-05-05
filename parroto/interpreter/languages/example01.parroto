@@ -1,0 +1,48 @@
+#!compiler: patex
+#!/usr/bin/parroto
+#!compiler: patex
+\start-event[apply-to="*", at="enter"]
+    #print "Entering",command.name
+\stop
+\start-event[apply-to="command.name=='my-command' ", at="enter"]
+    print "Entering",command.name, command.filename
+\stop
+\start-event[apply-to="*", at="leave"]
+    #print "Leaving",command.name
+\stop
+\execute{print "Hello world!"}
+\start-define[message,arguments={text: "default",}]
+    print 11111111111, text
+    return text*4
+\stop
+\start-define[my-command,arguments={text: "default", text2: "33"}]
+    return 3*text, 54, message(text=text2)
+\stop
+\start-execute[] #Using [] avoid errors: spaces are omitted. With this, the code is understood correctly.
+    document.language = "english"
+    document.call_stack = []
+    document.counter = {}
+    document.packages = set()
+    return ""
+\stop
+\my-command{}
+aa
+\my-command[text="aaa "]
+\my-command[text2="p"]
+
+
+\start-execute[]
+    try:
+        message2(text="2dd")
+    except NameError:
+        print "message2 does not exist"
+\stop
+\include{example02.parroto}
+\start-execute[]
+    try:
+        message2(text="2dd")
+        print "message2 exists!"
+    except NameError:
+        print "message2 does not exist"
+\stop
+

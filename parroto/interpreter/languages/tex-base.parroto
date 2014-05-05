@@ -1,0 +1,160 @@
+#!/usr/bin/parroto
+#!compiler: patex
+
+#implementar content as a property
+
+\start-execute
+	document.language = "english"
+	document.call_stack = []
+	document.counter = {}
+	document.packages = set()
+\stop
+
+\start-event[apply_in="*", at=enter]
+	call_value = {}
+	call_value["file"] = command.filename
+	call_value["name"] = command.name
+	call_value["line"] = command.line
+	call_value["column"] = command.column
+	document.call_stack.append(call_value)
+\stop
+
+\start-event[apply_in="*", at=exit]
+	document.call_stack.pop(-1)
+\stop
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% ERRORS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\start-private-define[get-stack-error, arguments={index: -1, keys: []}]
+	caller_stack = document.call_stack[index]
+	return [ caller_stack[key] for key in keys ]
+\stop
+
+\start-private-define[formatting-error, arguments={caller: "", line: "", message: ""}]
+	"{1}: {0} | ".format(caller, line) + message
+\stop
+
+\start-define[show-error, arguments={message: "ERROR", caller: "", line: -1, index: -1}]
+	if not caller:
+		caller, line = get_stack_error(index = index, keys = ["name", "line"])
+	document.show_error(formatting_error(caller=caller, line=line, message = message))
+\stop
+
+\start-define[show-warning, arguments={message: "WARNING", caller:"", line:-1, index: -1}]
+	if not caller:
+		caller, line = get_stack_error(index = index, keys = ["name", "line"])
+	document.show_warning(formatting_error(caller=caller, line=line, message = message))
+\stop
+
+\define-alias[show-warn, for=show-warning]
+
+\start-define[show-information, arguments={message: "INFORMATION", caller:"", line:-1, index: -1}]
+	if not caller:
+		caller, line = get_stack_error(index = index, keys = ["name", "line"])
+	document.show_information(formatting_error(caller=caller, line=line, message = message))
+\stop
+
+\define-alias[show-info, for=show-information]
+
+\start-define[verify-condition, arguments={condition: False, message:"", true_return: 0, false_return: 0}]
+	if condition:
+		show_error(message, index = -2)
+		return false_return
+	return true_return
+\stop
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% LANGUAGE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\start-define[language]
+	document.language = language.strip().lower()
+	document.stack_language = [document.language]
+\stop
+
+\start-define[other-language, arguments={language: "english"}]
+	current_language = language.strip().lower()
+	document.stack_language.append(current_language)
+\stop
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% DASHES
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\define[hyphen]{"-"}
+\test-define{ hyphen()=="-" }
+
+\define-alias[hyphen-dash, for=dash]
+\test-define{ hyphen()==hyphen_dash() }
+
+\define[en-dash]{"--"}
+\test-define{ en_dash()=="--" }
+
+\define[em-dash]{"---"}
+\test-define{ em_dash()=="---" }
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% QUOTES
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\start-define[enquote, arguments={type_quote: 0}]
+	quotes_start = ("`", "``", "``", ",,", "<<")
+	quotes_end = ("'", "''", '"', "''", ">>")
+	type_quote = verify_condition(
+		type_quote >= 0 and type_quote < len(quotes_start),
+		"Quote type {} is not valid.".format(type_quote), type_quote, 0)
+	return "{}{}{}".format(quotes_start[type_quote], command.content, quotes_end[type_quote])
+\stop
+
+\start-define[short-quote, arguments={quoting: False, type_quote: 0}]
+	r"\quote{{{content}}}".format(content = command.content if not quoting else enquote(command.content, type_quote))
+\stop
+
+\start-define[long-quote, arguments={quoting: False, type_quote: 0}]
+	r"\quotation{{{content}}}".format(content = command.content if not quoting else enquote(command.content, type_quote))
+\stop
+
+\start-define[verse-quote, arguments={quoting: False, type_quote: 0}]
+	r"\verse{{{content}}}".format(content = command.content if not quoting else enquote(command.content, type_quote))
+\stop
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% COUNTERS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\start-define[counter-exists, arguments={name: "counter"}]
+	return name in document.counter
+\stop
+
+\start-define[counter-define, arguments={name: "counter", value:0}]{
+	if counter_exists(name):
+		show_warning("Counter {} is redefining".format(name))
+	document.counter[name] = value
+\stop
+
+\start-define[counter-increment, arguments={name: "counter", value:1}]{
+	if not counter_exists(name):
+		show_warning("Counter {0} does not exist. It was created {0}=0.".format(name))
+	document.counter.setdefault(name, 0)
+	document.counter[name] += 1
+\stop
+
+\define-alias[counter-inc, for=counter-increment]
+
+\start-define[counter-decrement, arguments={name: "counter", value:1}]{
+	if not counter_exists(name):
+		show_warning("Counter {0} does not exist. It was created {0}=0.".format(name))
+	document.counter.setdefault(name, 0)
+	document.counter[name] -= 1
+\stop
+
+\define-alias[counter-dec, for=counter-decrement]
+
+\start-define[counter-set, arguments={name: "counter", value:0}]{
+	document.setdefault("counter", {})
+	if not counter_exists(name):
+		show_warning("Counter {0} does not exist. It was created {0}={1}.".format(name, value))
+	document.counter.setdefault(name, value)
+\stop
+

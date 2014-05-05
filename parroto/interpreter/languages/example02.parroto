@@ -1,0 +1,9 @@
+#!compiler: patex
+#!/usr/bin/parroto
+#!compiler: plaut
+@execute{print "Hello world from other side!"}
+@start:define(message2,arguments=( text: "default" ))
+    print 11111111111*2, text
+    return text*4
+@stop
+12345

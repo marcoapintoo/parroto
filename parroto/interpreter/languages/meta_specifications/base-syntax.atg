@@ -207,7 +207,7 @@ PRODUCTIONS
                 ('-' | '.' | identifier)                (. value += self.token.val .)
             }
         .
-    CommandName<out value>
+    CommandName<out value>                              (. value = "" .)
         =   Identifier<out value>
         |   IdentifierStartMark
             Identifier<out value>

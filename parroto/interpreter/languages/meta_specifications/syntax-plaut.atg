@@ -207,7 +207,7 @@ PRODUCTIONS
                 ('-' | '.' | identifier)                (. value += self.token.val .)
             }
         .
-    CommandName<out value>
+    CommandName<out value>                              (. value = "" .)
         =   Identifier<out value>
         |   IdentifierStartMark
             Identifier<out value>
@@ -254,7 +254,7 @@ PRODUCTIONS
                 (   KeyStringEndEscapeMark
                 |   '\\%')                              (. value += self.token.val[1:] .)
             }
-            KeyStringEndMark
+            KeySringEndMark
         .
     CommonString<out value>                             (. value = u"" .)
         =    (string1 | string2)                        (. value += eval("u"+self.token.val); .)

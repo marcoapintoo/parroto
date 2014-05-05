@@ -76,7 +76,7 @@ class DocumentContextData(object):
     __metaclass__ = AutoObject
     pool = None
     events = None
-    filename = ""
+    filename = "<stdin>"
 
     def __init__(self):
         self.pool = CommandPool()
@@ -102,7 +102,7 @@ class DocumentContextData(object):
         return self.pool.fill_callable(target, document)
 
 
-class _DocumentData(DocumentContextData):
+class DocumentData(DocumentContextData):
     scopes = None
 
     def __init__(self):
@@ -118,6 +118,7 @@ class _DocumentData(DocumentContextData):
     def __scopes(self):
         results = [self.pool]
         results.extend(self.scopes)
+        return results
 
     def __scope_find_tag(self, tag_name):
         results = [pool.find_tag(tag_name) for pool in self.__scopes()]
@@ -143,39 +144,19 @@ class _DocumentData(DocumentContextData):
             pool.fill_callable(target, document)
 
 
-class DocumentData(object):
-    __metaclass__ = AutoObject
-    pool = None
-    private_pool = None
-    events = None
-
-    def __init__(self):
-        self.pool = CommandPool()
-        self.private_pool = CommandPool()
-        self.events = {}
-
-    def __str__(self):
-        return str(self.__dict__)
-
-    def raise_event(self, event, command):
-        self.events.setdefault(event, EventCollection())
-        self.events[event].execute(command)
-
-
 class CommandData(object):
     __metaclass__ = AutoObject
     __line = 0
     __column = 0
-    __filename = ""
     __name = ""
     __structure = None
     __content = None
     document = None
 
-    def __init__(self, line=0, column=0, filename="<stdin>", name="", structure=None):
+    def __init__(self, line=0, column=0, name="", structure=None):
         self.__line = line
         self.__column = column
-        self.__filename = filename
+        # self.__filename = filename
         self.__name = name
         self.__structure = structure
         # self.__content = content
@@ -190,7 +171,8 @@ class CommandData(object):
 
     @property
     def filename(self):
-        return self.__filename
+        # return self.__filename
+        return self.document.filename
 
     @property
     def name(self):
@@ -286,16 +268,6 @@ def string_code({params}):
         code = "\n".join(line[:line.find("#")] if line.find("#") >= 0 else line for line in code.split("\n"))
         return code
 
-    # def is_runnable(self):
-    # conditions = [
-    # "return" in self.code,
-    # "+=" in self.code,
-    # re.search(r"\.\s*append\s*\(", self.code) is not None,
-    #         re.search(r"\bresult\b", self.code) is not None,
-    #         re.search(r"\b{0}\b".format(self.var_name), self.code) is not None,
-    #         ]
-    #     return any(conditions)
-
     def is_inline_sentence(self, code):
         try:
             compile(code, "<command:{}>".format(self.var_name), "eval")
@@ -368,28 +340,32 @@ class StringCommand(object):
         exec_code = StringCode(code=code, name=self.codename(), arguments=self.arguments)
         return exec_code.drain()
 
-    def join_arguments(self, reference, *newvalues):
+    def join_arguments(self, reference, *new_values):
         result = reference.copy()
-        for collection in newvalues:
+        for collection in new_values:
             for key, value in collection.items():
                 if key in result:
                     result[key] = value
         return result
 
+    def unsecure_call(self, command, *args, **kwargs):
+        code = compile(self.get_code(), "<command:{}>{}".format(self.codename(), self.get_code()), "exec")
+        # exec code in globals(), locals()
+        variables = {}
+        # !command.document.private_pool.fill_callable(variables, command.document)
+        #!command.document.pool.fill_callable(variables, command.document)
+        command.document.fill_callable(variables, command.document)
+        variables["document"] = command.document
+        variables["command"] = command
+        function_locals = {}
+        exec code in variables, function_locals
+        handler = function_locals["string_code"]
+        arguments = self.join_arguments(self.arguments, command.arguments, kwargs)  # WHY??
+        return handler(**arguments)
+
     def call(self, command, *args, **kwargs):
         try:
-            code = compile(self.get_code(), "<command:{}>{}".format(self.codename(), self.get_code()), "exec")
-            # exec code in globals(), locals()
-            variables = {}
-            command.document.private_pool.fill_callable(variables, command.document)
-            command.document.pool.fill_callable(variables, command.document)
-            variables["document"] = command.document
-            variables["command"] = command
-            function_locals = {}
-            exec code in variables, function_locals
-            handler = function_locals["string_code"]
-            arguments = self.join_arguments(self.arguments, command.arguments, kwargs)  # WHY??
-            return handler(**arguments)
+            return self.unsecure_call(command, *args, **kwargs)
         except Exception, e:
             Message.error("Executing {}: {}".format(self.codename(), str(e)))
             raise e
@@ -412,6 +388,23 @@ class StringCommand(object):
                     Message.error("Invalid arguments format: {}".format(arguments))
                     arguments = {}
         return arguments
+
+
+class LoadFile(object):
+    __metaclass__ = AutoObject
+    filename = ""
+    document = None
+    extension = ".parroto"
+
+    def __init__(self):
+        pass
+
+    def load(self):
+        self.document.create_context(self.filename)
+        interpreter = BaseSelector()
+        element = interpreter.process_file(self.filename)
+        walker = CommandWalker(root=element, document=self.document)
+        return walker.walk()
 
 
 def add_events(handler):
@@ -438,8 +431,8 @@ class CommandWalker(object):
         return self.document.pool
 
     @property
-    def private_pool(self):
-        return self.document.private_pool
+    def private_pools(self):
+        return self.document.__scopes()
 
     def default_pool(self):
         self.pool.setdefault("document-file", self.walk_command)
@@ -447,7 +440,13 @@ class CommandWalker(object):
         self.pool.setdefault("define", self.define_command)
         self.pool.setdefault("execute", self.execute_command)
         self.pool.setdefault("event", self.event_command)
+        self.pool.setdefault("include", self.include_command)
 
+    @staticmethod
+    @add_events
+    def include_command(command, *args, **kwargs):
+        filename = command.content
+        return LoadFile(filename=filename, document=command.document).load()
 
     @staticmethod
     @add_events
@@ -469,7 +468,6 @@ class CommandWalker(object):
             arguments = CommandWalker(root=arguments, document=command.document).walk()
         if is_a(command_name, Element):
             command_name = CommandWalker(root=command_name, document=command.document).walk()
-        # command.document.pool[command_name] = lambda *arg, **a: "3"
         string_command = StringCommand(command=command.structure, arguments=arguments)
         command.document.pool[command_name] = add_events(string_command)
         return ""
@@ -482,7 +480,6 @@ class CommandWalker(object):
             apply_to = CommandWalker(root=apply_to, document=command.document).walk()
         if is_a(event_name, Element):
             event_name = CommandWalker(root=event_name, document=command.document).walk()
-        # command.document.pool[command_name] = lambda *arg, **a: "3"
         string_command = StringCommand(command=command.structure)
         command.document.events.setdefault(event_name, EventCollection())
         command.document.events[event_name].add(handler=string_command, condition=apply_to)
@@ -497,7 +494,6 @@ class CommandWalker(object):
         for property_name, node_value in self.root.attributes.items():
             command_node = CommandWalker(root=node_value, document=self.document).walk()
             self.assign_special_properties(parameters, specials, property_name, command_node)
-            # if is_a(node<-node_value)
         command_data = self.command_sentence(**specials)
         parameters["command"] = command_data
         parameters["document"] = self.document
@@ -516,43 +512,9 @@ class CommandWalker(object):
 
 
 if __name__ == "__main__":
-    interpreter = BaseSelector()
-    element = interpreter.process(r"""
-#!compiler: patex
-#!/usr/bin/parroto
-#!compiler: patex
-\start-event[apply-to="*", at="enter"]
-    #print "Entering",command.name
-\stop
-\start-event[apply-to="command.name=='my-command' ", at="enter"]
-    print "Entering",command.name
-\stop
-\start-event[apply-to="*", at="leave"]
-    #print "Leaving",command.name
-\stop
-\execute{print "Hello world!"}
-\start-define[message,arguments={text: "default",}]
-    print 11111111111, text
-    return text*4
-\stop
-\start-define[my-command,arguments={text: "default", text2: "33"}]
-    return 3*text, 54, message(text=text2)
-\stop
-\start-execute[] #Using [] avoid errors: spaces are omitted. With this, the code is understood correctly.
-    document.language = "english"
-    document.call_stack = []
-    document.counter = {}
-    document.packages = set()
-    return ""
-\stop
-\my-command{}
-aa
-\my-command[text="aaa "]
-\my-command[text2="p"]
-""")
-    # print element.xml_string
-    # print interpreter.instructions
-    walker = CommandWalker(root=element, document=DocumentData())
-    print walker.walk()
-    # print walker.document
+    loader = LoadFile(
+        filename="example01.parroto",
+        document=DocumentData()
+    )
+    print loader.load()
 

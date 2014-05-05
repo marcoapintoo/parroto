@@ -957,6 +957,7 @@ class Parser(object):
         return cmd
 
     def CommandName(self):
+        value = ""
         if self.la.kind == 2:
             value = self.Identifier()
         elif self.la.kind == 15:
