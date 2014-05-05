@@ -72,6 +72,77 @@ class EventCollection(list):
                 handler(command, *args, **kwargs)
 
 
+class DocumentContextData(object):
+    __metaclass__ = AutoObject
+    pool = None
+    events = None
+    filename = ""
+
+    def __init__(self):
+        self.pool = CommandPool()
+        self.events = {}
+
+    def __str__(self):
+        return str(self.__dict__)
+
+    def raise_event(self, event, command):
+        self.events.setdefault(event, EventCollection())
+        self.events[event].execute(command)
+
+    def find_tag(self, tag_name):
+        return self.pool.find_tag(tag_name)
+
+    def exists_tag(self, tag_name):
+        return self.pool.exists_tag(tag_name)
+
+    def execute(self, tag_name, *args, **kwargs):
+        return self.pool.execute(tag_name, *args, **kwargs)
+
+    def fill_callable(self, target, document):
+        return self.pool.fill_callable(target, document)
+
+
+class _DocumentData(DocumentContextData):
+    scopes = None
+
+    def __init__(self):
+        super(DocumentData, self).__init__()
+        self.scopes = []
+
+    def create_context(self, filename="<stdin>"):
+        self.scopes.append(DocumentContextData(filename=filename))
+
+    def last_context(self):
+        return self.scopes[-1]
+
+    def __scopes(self):
+        results = [self.pool]
+        results.extend(self.scopes)
+
+    def __scope_find_tag(self, tag_name):
+        results = [pool.find_tag(tag_name) for pool in self.__scopes()]
+        for pos, result in enumerate(results):
+            if result is not None:
+                return pos, result
+        return -1, None
+
+    def find_tag(self, tag_name):
+        return self.__scope_find_tag(tag_name)[1]
+
+    def exists_tag(self, tag_name):
+        return self.find_tag(tag_name) is not None
+
+    def execute(self, tag_name, *args, **kwargs):
+        pos, result = self.__scope_find_tag(tag_name)
+        if pos == -1:
+            return ""
+        return self.__scopes()[pos].execute(tag_name, *args, **kwargs)
+
+    def fill_callable(self, target, document):
+        for pool in self.__scopes():
+            pool.fill_callable(target, document)
+
+
 class DocumentData(object):
     __metaclass__ = AutoObject
     pool = None
@@ -101,7 +172,7 @@ class CommandData(object):
     __content = None
     document = None
 
-    def __init__(self, line=0, column=0, filename="", name="", structure=None):
+    def __init__(self, line=0, column=0, filename="<stdin>", name="", structure=None):
         self.__line = line
         self.__column = column
         self.__filename = filename
