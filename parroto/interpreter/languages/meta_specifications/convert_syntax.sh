@@ -63,6 +63,8 @@ function replace_symbols(){
 		value=$( echo $value | sed 's/\\/\\\\/g' )
 		value=$( echo $value | sed 's/"/\\"/g' )
 		sed -r ':a;N;$!ba;s/(\s+'"${name}"'\s*\n\s*=\s*)([^.]*)./\1'"${value}"'./g' $tempscriptname > $scriptname
+                cp $scriptname $tempscriptname
+		sed -r 's/\$\$'"${name}"'/'"${value}"'/g' $tempscriptname > $scriptname
 	done < $filesymbols
 	rm $tempscriptname
 }

@@ -4,6 +4,7 @@ __author__ = 'Marco Antonio Pinto Orellana'
 import os
 import sys
 import re
+from functools import wraps
 from pyquery import PyQuery
 
 if __name__ == "__main__":
@@ -49,17 +50,45 @@ class CommandStructure(PyQuery):
         return "." in self.first_tag_name()
 
 
+class EventCollection(list):
+    def __init__(self, *args, **kwargs):
+        list.__init__(self, *args, **kwargs)
+
+    def add(self, handler, condition):
+        condition_code = condition
+        if condition_code.strip() == "*":
+            condition = lambda command: True
+        else:
+            try:
+                code = compile(condition_code, "<<", "eval")
+                condition = lambda command: eval(code, {}, {"command": command})
+            except Exception, e:
+                condition = lambda command: command.name.lower().strip() == condition_code.lower().strip()
+        self.append((handler, condition))
+
+    def execute(self, command, *args, **kwargs):
+        for handler, condition in self:
+            if condition(command):
+                handler(command, *args, **kwargs)
+
+
 class DocumentData(object):
     __metaclass__ = AutoObject
     pool = None
     private_pool = None
+    events = None
 
     def __init__(self):
         self.pool = CommandPool()
         self.private_pool = CommandPool()
+        self.events = {}
 
     def __str__(self):
         return str(self.__dict__)
+
+    def raise_event(self, event, command):
+        self.events.setdefault(event, EventCollection())
+        self.events[event].execute(command)
 
 
 class CommandData(object):
@@ -139,9 +168,6 @@ class CommandPool(dict):
         def create_handler(handler, key):
             def call_wrapper(*args, **kwargs):
                 return handler(CommandData(document=document), *args, **kwargs)
-
-            call_wrapper.handler = handler
-            call_wrapper.key = key
             return call_wrapper
 
         for key, handler in self.items():
@@ -154,7 +180,6 @@ class AutoDict(dict):
 
 
 class StringCode(object):
-    __metaclass__ = AutoObject
     code = ""
     var_name = "<name>"
     arguments = {}
@@ -171,10 +196,12 @@ class StringCode(object):
             base_code = "return {}".format(base_code.strip())
         elif not self.is_group_sentence(base_code):
             base_code = "return {}".format(repr(base_code))
+        if base_code.strip() == "":
+            base_code = "pass"
         code = """
 def string_code({params}):
     {code}
-        """.format(
+            """.format(
             params=",".join("{}={}".format(k, repr(str(v))) for k, v in self.arguments.items()),
             code=base_code.replace("\n", "\n    ").strip()
         ).strip()
@@ -185,13 +212,14 @@ def string_code({params}):
         if code.startswith("'") and code.endswith("'") or \
                         code.startswith('"') and code.endswith('"'):
             code = eval(code)
+        code = "\n".join(line[:line.find("#")] if line.find("#") >= 0 else line for line in code.split("\n"))
         return code
 
     # def is_runnable(self):
     # conditions = [
     # "return" in self.code,
-    #         "+=" in self.code,
-    #         re.search(r"\.\s*append\s*\(", self.code) is not None,
+    # "+=" in self.code,
+    # re.search(r"\.\s*append\s*\(", self.code) is not None,
     #         re.search(r"\bresult\b", self.code) is not None,
     #         re.search(r"\b{0}\b".format(self.var_name), self.code) is not None,
     #         ]
@@ -218,7 +246,11 @@ def string_code({params}):
             code = self.code
         lines = code.split("\n")
         first_indent = -1
-        indent = min(re.search(r"[^\s]", line).start() for line in lines if line.strip() != "")
+        indent_list = [re.search(r"[^\s]", line).start() \
+                       for line in lines \
+                       if line.strip() != "" and \
+                       (line.find("#") < 0 or line[:line.find("#")].strip() != "")]
+        indent = min(indent_list) if indent_list else 0
         for index, line in enumerate(lines):
             if first_indent < 0 and line.strip() != "":
                 first_indent = re.search(r"[^\s]", line).start()
@@ -234,6 +266,7 @@ def string_code({params}):
 
 class StringCommand(object):
     __metaclass__ = AutoObject
+    __name__ = ""
     __command = None
     __arguments = None
 
@@ -284,7 +317,7 @@ class StringCommand(object):
             function_locals = {}
             exec code in variables, function_locals
             handler = function_locals["string_code"]
-            arguments = self.join_arguments(self.arguments, command.arguments, kwargs)  #WHY??
+            arguments = self.join_arguments(self.arguments, command.arguments, kwargs)  # WHY??
             return handler(**arguments)
         except Exception, e:
             Message.error("Executing {}: {}".format(self.codename(), str(e)))
@@ -310,6 +343,17 @@ class StringCommand(object):
         return arguments
 
 
+def add_events(handler):
+    @wraps(handler)
+    def handler_with_event(command, *args, **kwargs):
+        command.document.raise_event("enter", command)
+        return_value = handler(command, *args, **kwargs)
+        command.document.raise_event("leave", command)
+        return return_value
+
+    return handler_with_event
+
+
 class CommandWalker(object):
     __metaclass__ = AutoObject
     root = None
@@ -330,12 +374,23 @@ class CommandWalker(object):
         self.pool.setdefault("document-file", self.walk_command)
         self.pool.setdefault("text", self.walk_command)
         self.pool.setdefault("define", self.define_command)
+        self.pool.setdefault("execute", self.execute_command)
+        self.pool.setdefault("event", self.event_command)
+
 
     @staticmethod
+    @add_events
+    def execute_command(command, *args, **kwargs):
+        string_command = StringCommand(command=command.structure)
+        return string_command(command, *args, **kwargs) or ""
+
+    @staticmethod
+    @add_events
     def walk_command(command, *args, **kwargs):
         return command.structure.value if command.structure.value else command.content
 
     @staticmethod
+    @add_events
     def define_command(command, *args, **kwargs):
         command_name = command.structure.get("argument-0") or command.structure.get("name")
         arguments = command.structure.get("arguments", "{}")
@@ -345,7 +400,21 @@ class CommandWalker(object):
             command_name = CommandWalker(root=command_name, document=command.document).walk()
         # command.document.pool[command_name] = lambda *arg, **a: "3"
         string_command = StringCommand(command=command.structure, arguments=arguments)
-        command.document.pool[command_name] = string_command
+        command.document.pool[command_name] = add_events(string_command)
+        return ""
+
+    @staticmethod
+    def event_command(command, *args, **kwargs):
+        event_name = command.structure.get("argument-0") or command.structure.get("at")
+        apply_to = command.structure.get("apply-to", "*")
+        if is_a(apply_to, Element):
+            apply_to = CommandWalker(root=apply_to, document=command.document).walk()
+        if is_a(event_name, Element):
+            event_name = CommandWalker(root=event_name, document=command.document).walk()
+        # command.document.pool[command_name] = lambda *arg, **a: "3"
+        string_command = StringCommand(command=command.structure)
+        command.document.events.setdefault(event_name, EventCollection())
+        command.document.events[event_name].add(handler=string_command, condition=apply_to)
         return ""
 
     def command_sentence(self, **kwargs):
@@ -381,20 +450,28 @@ if __name__ == "__main__":
 #!compiler: patex
 #!/usr/bin/parroto
 #!compiler: patex
-
+\start-event[apply-to="*", at="enter"]
+    #print "Entering",command.name
+\stop
+\start-event[apply-to="command.name=='my-command' ", at="enter"]
+    print "Entering",command.name
+\stop
+\start-event[apply-to="*", at="leave"]
+    #print "Leaving",command.name
+\stop
+\execute{print "Hello world!"}
 \start-define[message,arguments={text: "default",}]
     print 11111111111, text
     return text*4
 \stop
 \start-define[my-command,arguments={text: "default", text2: "33"}]
-    return 3*text, 54, message.key, message.handler.get_code(), message(text=text2)
+    return 3*text, 54, message(text=text2)
 \stop
-\start-execute[named, arguments={}]
+\start-execute[] #Using [] avoid errors: spaces are omitted. With this, the code is understood correctly.
     document.language = "english"
     document.call_stack = []
     document.counter = {}
     document.packages = set()
-    print "COMMAND:", command
     return ""
 \stop
 \my-command{}
@@ -406,5 +483,5 @@ aa
     # print interpreter.instructions
     walker = CommandWalker(root=element, document=DocumentData())
     print walker.walk()
-    print walker.document
+    # print walker.document
 

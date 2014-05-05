@@ -112,6 +112,7 @@ PRODUCTIONS
             CommandName<out name>                       (. cmd.name = name.replace("_", "").lower() .)
             [spaces                                     (. content = self.token.val; .) ]
                                                         (. self.mark_line(); .)
+                                                        (. if self.token.next.val == $$ArgumentStartMark + $$ArgumentEndMark: self.token = self.token.next .)
             [
                 ArgumentExpression<cmd>                 (. content = u"" .)
             ]

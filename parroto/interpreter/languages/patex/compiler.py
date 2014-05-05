@@ -925,6 +925,7 @@ class Parser(object):
             self.Get()
             content = self.token.val;
         self.mark_line();
+        if self.token.next.val == "[" + "]": self.token = self.token.next
         if (self.la.kind == 10):
             self.ArgumentExpression(cmd)
             content = u""
