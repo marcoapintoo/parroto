@@ -50,14 +50,16 @@ class InstructionFinder(object):
 
     def find_instructions(self, text):
         mark = "#!"
+        count = 1
         end_pos = 0
         while True:
             pos = text.find(mark, end_pos)
             if pos == -1 or text[end_pos:pos].strip() != "":
                 break
             end_pos = text.find("\n", pos)
+            count += 1
             self.add_instruction(CompilerInstruction.from_string(text[pos + len(mark):end_pos]))
-        return text[end_pos + 1:]
+        return "\n" * count + text[end_pos + 1:]
 
 
 class BaseSelector(InstructionFinder):
@@ -103,6 +105,7 @@ if __name__ == "__main__":
 #!/usr/bin/parroto
 #!compiler: patex
 
+\special-label{aaa}
 
 
 \define[name=label,arguments={text: "",}]{

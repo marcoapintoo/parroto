@@ -40,7 +40,8 @@ class AutoObject(type):
             AutoObject.set_members(obj, kwargs,
                                    omit_special_names=False,
                                    omit_property=True,
-                                   override=False,
+                                   # override=False,
+                                   override=True,
                                    deep_copy=False)
             if default_init:
                 AutoObject.call_base_constructor(default_init, obj, args, kwargs)
@@ -61,6 +62,7 @@ class AutoObject(type):
                     (is_property(value) and not omit_property):
                 continue
             try:
+                #if is_property(getattr(type(obj), name, None)): continue #FIX:
                 oldvalue = getattr(obj, name, None)
                 if oldvalue is None or override:
                     setattr(obj, name, copy.deepcopy(value) if deep_copy else value)
@@ -142,3 +144,4 @@ class NativeAutoAttributeObject(object):
     def __getattr__(self, name):
         self.__init_native_attribute(name, None)
         return object.__getattribute__(self, name)
+

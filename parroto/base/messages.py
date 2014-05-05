@@ -32,6 +32,7 @@ class Message(object):
         """
         print(" " * self.prefix_space + self.content, file=sys.stderr)
 
+
     @staticmethod
     def meta_advise(message, line, header_message, message_attr={}, prefix_space=4):
         """

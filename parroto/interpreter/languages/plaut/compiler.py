@@ -727,12 +727,15 @@ class Parser(object):
 
     document = None
     positions_mark = []
+    code_mark = []
 
     def mark_line(self):
         self.positions_mark.append(self.token.pos + len(self.token.val))
+        self.code_mark.append((self.token.next.line, self.token.next.col))
 
     def clear_marks(self):
         self.positions_mark = []
+        self.code_mark = []
 
     def is_command_token(self):
         token = self.token.next
@@ -753,6 +756,8 @@ class Parser(object):
         position_end = self.token.pos + len(self.token.val)
         portions = [self.scanner.buffer.buf[self.positions_mark[i]: self.positions_mark[i + 1]] for i in
                     range(0, len(self.positions_mark) - 1)]
+        cmd["__line__"] = self.code_mark[0][0]
+        cmd["__column__"] = self.code_mark[0][1]
         if len(portions) == 1:
             cmd["__code__"] = formatter(repr(portions[0]))
         else:
@@ -904,12 +909,14 @@ class Parser(object):
         if (self.la.kind == 5):
             self.Get()
             spaceval = self.token.val;
-        self.mark_line();
+            #self.mark_line();
+        if self.token.next.val != "{": self.mark_line();
         if (self.la.kind == 15):
             content = self.TextArguments(cmd)
             self.add_text(cmd, content);
             spaceval = u"";
-        self.mark_line();
+            #self.mark_line(); self.add_code(cmd)
+        if self.token.val != "}": self.mark_line();
         self.add_code(cmd)
         cmd.children.append(spaceval)
         return cmd
@@ -982,6 +989,7 @@ class Parser(object):
     def TextArguments(self, element):
         txt = u""
         self.TextArgumentStartMark()
+        self.mark_line()
         while self.StartOf(5):
             if self.StartOf(6):
                 if self.StartOf(7):
@@ -1006,6 +1014,7 @@ class Parser(object):
                 self.add_command(element, cmd, txt);
                 txt = u"";
 
+        self.mark_line()
         self.TextArgumentEndMark()
         return txt
 

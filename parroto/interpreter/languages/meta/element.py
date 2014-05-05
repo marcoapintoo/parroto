@@ -78,6 +78,22 @@ class Element(object):
     def attributes(self):
         return self.__attributes
 
+    def get(self, key, default=None):
+        if key in self:
+            return self[key]
+        return default
+
+    # def children_value(self, evaluate=False):
+    # text = ""
+    #     if not self.children:
+    #         return self.value if not evaluate else eval(self.value)
+    #     for child in self.children:
+    #         text += unicode(child.children_value(evaluate=evaluate))
+    #     try:
+    #         return text if not evaluate else eval(text)
+    #     except:
+    #         return text
+
     def copy_children(self, other):
         for child in other.children:
             self.children.append(child)
