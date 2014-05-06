@@ -1,9 +1,9 @@
 #!/usr/bin/parroto
 #!compiler: patex
-
+\document-flags[disabled={events}]
 #implementar content as a property
 
-\start-execute
+\start-execute[]
 	document.language = "english"
 	document.call_stack = []
 	document.counter = {}
@@ -16,14 +16,18 @@
 	call_value["name"] = command.name
 	call_value["line"] = command.line
 	call_value["column"] = command.column
+	#print "  ",id(command.structure)
 	document.call_stack.append(call_value)
+	#print 1111111, len(document.call_stack), command.name, id(command.structure)
 \stop
 
 \start-event[apply_in="*", at=exit]
-	document.call_stack.pop(-1)
+	#if len(document.call_stack)==0: print command.name, id(command.structure)
+	if len(document.call_stack)!=0: document.call_stack.pop(-1)
+	#print 1111111*2, len(document.call_stack), command.name, id(command.structure),"\n"
 \stop
 
-
+\document-flags[enabled={events}]
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % ERRORS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -158,3 +162,24 @@
 	document.counter.setdefault(name, value)
 \stop
 
+\start-define[label]
+    return "".join([
+        "Call stack: {}".format(" ".join( data["line"] for data in document.call_stack )),
+        command.content,
+        "Before call"
+    ])
+\stop
+
+
+\label{
+    Data-1
+    \label{
+        Data-2
+        \label{
+            Data-3
+            \label{
+                Data-4
+            }
+        }
+    }
+}

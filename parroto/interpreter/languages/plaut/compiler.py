@@ -114,6 +114,7 @@ class Buffer(object):
     def __iter__(self):
         return iter(self.lines)
 
+
 class Scanner(object):
     EOL = u'\n'
     eofSym = 0
@@ -124,12 +125,12 @@ class Scanner(object):
     start = [
         0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        4, 1, 7, 1, 1, 1, 1, 5, 1, 1, 1, 0, 1, 1, 1, 1,
-        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 1, 1, 0, 17, 0, 1,
+        4, 1, 7, 1, 1, 1, 1, 5, 17, 18, 1, 0, 1, 1, 1, 1,
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 1, 1, 0, 19, 0, 1,
         15, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 23, 1, 0, 2,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 25, 1, 0, 2,
         0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 18, 1, 19, 0, 0,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 20, 1, 21, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -263,11 +264,7 @@ class Scanner(object):
 
     def CheckLiteral(self):
         lit = self.t.val
-        if lit == "(":
-            self.t.kind = 10
-        elif lit == ")":
-            self.t.kind = 11
-        elif lit == ",":
+        if lit == ",":
             self.t.kind = 12
         elif lit == ":":
             self.t.kind = 14
@@ -319,7 +316,7 @@ class Scanner(object):
             elif state == 1:
                 if (self.ch == '!'
                     or self.ch >= '#' and self.ch <= '&'
-                    or self.ch >= '(' and self.ch <= '*'
+                    or self.ch == '*'
                     or self.ch >= ',' and self.ch <= '/'
                     or self.ch >= ':' and self.ch <= ';'
                     or self.ch == '?'
@@ -520,24 +517,30 @@ class Scanner(object):
                 self.t.kind = 9
                 done = True
             elif state == 17:
-                self.t.kind = 13
+                self.t.kind = 10
                 done = True
             elif state == 18:
-                self.t.kind = 15
+                self.t.kind = 11
                 done = True
             elif state == 19:
-                self.t.kind = 16
+                self.t.kind = 13
                 done = True
             elif state == 20:
-                self.t.kind = 17
+                self.t.kind = 15
                 done = True
             elif state == 21:
-                self.t.kind = 18
+                self.t.kind = 16
                 done = True
             elif state == 22:
-                self.t.kind = 27
+                self.t.kind = 17
                 done = True
             elif state == 23:
+                self.t.kind = 18
+                done = True
+            elif state == 24:
+                self.t.kind = 27
+                done = True
+            elif state == 25:
                 if self.ch == '@':
                     buf += unicode(self.ch)
                     self.NextCh()
@@ -545,15 +548,15 @@ class Scanner(object):
                 elif self.ch == '}':
                     buf += unicode(self.ch)
                     self.NextCh()
-                    state = 20
+                    state = 22
                 elif self.ch == ')':
                     buf += unicode(self.ch)
                     self.NextCh()
-                    state = 21
+                    state = 23
                 elif self.ch == '%':
                     buf += unicode(self.ch)
                     self.NextCh()
-                    state = 22
+                    state = 24
                 else:
                     self.t.kind = Scanner.noSym
                     done = True
@@ -726,23 +729,40 @@ class Parser(object):
 
     document = None
     positions_mark = []
-    code_mark = []
+    code_marks = []
+    _code_mark = []
+
+    @property
+    def code_mark(self):
+        if self.code_marks == []:
+            self.code_marks.append([])
+        return self.code_marks[-1]
+
+    @code_mark.setter
+    def code_mark(self, value):
+        self.code_marks.append([])
+
     def mark_line(self):
         self.positions_mark.append(self.token.pos + len(self.token.val))
         self.code_mark.append((self.token.next.line, self.token.next.col))
+
     def clear_marks(self):
         self.positions_mark = []
         self.code_mark = []
+
     def is_command_token(self):
         token = self.token.next
         post_token = self.token.next.next
         return token.val == "\\" and post_token.val not in ["stop", "Stop", "STOP"]
+
     def add_command(self, element, cmd, txt):
         self.add_text(element, txt)
         element.children.append(cmd)
+
     def add_text(self, element, txt):
         if txt != "":
             element.children.append(txt)
+
     def add_code(self, cmd):
         self.mark_line()
         formatter = lambda portion: "" if not portion else (portion[1:] if portion[0].isalnum() else portion)
@@ -757,6 +777,12 @@ class Parser(object):
             cmd["__code__"] = ""
             for portion in portions:
                 cmd["__code__"].children.append(formatter(repr(portion)))
+        self.code_marks.pop(-1)
+
+    def verify_name(self, name):
+        #if not name.replace("-","").isalnum(): raise Exception("Invalid parameter name "+name);
+        if not name.replace("-", "").replace("_", "").isalnum():
+            raise Exception("Invalid parameter name " + name);
 
 
     def __init__(self):
@@ -851,13 +877,13 @@ class Parser(object):
                 txt = u"";
             elif self.la.kind == 5:
                 self.Get()
-                txt += self.token.val;  
+                txt += self.token.val;
             elif self.la.kind == 9:
                 self.CommandEscapeMark()
-                txt += self.token.val[1:]; 
+                txt += self.token.val[1:];
             else:
                 self.Get()
-                txt += self.token.val;  
+                txt += self.token.val;
 
         self.Expect(0)
         self.add_text(element, txt)
@@ -891,27 +917,27 @@ class Parser(object):
         content = u"";
         spaceval = "";
         name = self.CommandName()
-        cmd.name = name.replace("_", "").lower() 
+        cmd.name = name.replace("_", "").lower()
         if (self.la.kind == 5):
             self.Get()
             spaceval = self.token.val;
-        self.mark_line(); 
+        self.mark_line();
         if (self.la.kind == 10):
             self.ArgumentExpression(cmd)
-            spaceval = u"" 
+            spaceval = u""
         if (self.la.kind == 5):
             self.Get()
             spaceval = self.token.val;
-            # self.mark_line();
-        if self.token.next.val != "{": self.mark_line(); 
+            #self.mark_line();
+        if self.token.next.val != "{": self.mark_line();
         if (self.la.kind == 15):
             content = self.TextArguments(cmd)
             self.add_text(cmd, content);
             spaceval = u"";
-            # self.mark_line(); self.add_code(cmd)
+            #self.mark_line(); self.add_code(cmd)
         if self.token.val != "}": self.mark_line();
         self.add_code(cmd)
-        cmd.children.append(spaceval) 
+        cmd.children.append(spaceval)
         return cmd
 
     def ExtendedCommand(self):
@@ -921,46 +947,46 @@ class Parser(object):
         content = u"";
         self.BeginToken()
         if (self.la.kind == 5):
-            self.Get( )
+            self.Get()
         name = self.CommandName()
-        cmd.name = name.replace("_", "").lower() 
+        cmd.name = name.replace("_", "").lower()
         if (self.la.kind == 5):
             self.Get()
             content = self.token.val;
         self.mark_line();
-        if self.token.next.val == "(" + ")": self.token = self.token.next 
+        if self.token.next.val == "(" + ")": self.token = self.token.next
         if (self.la.kind == 10):
             self.ArgumentExpression(cmd)
             content = u""
-        self.mark_line(); 
+        self.mark_line();
         while self.StartOf(1):
             if self.StartOf(3):
                 self.Get()
-                content += self.token.val; 
+                content += self.token.val;
             elif self.la.kind == 5:
                 self.Get()
-                content += self.token.val; 
+                content += self.token.val;
             elif self.la.kind == 9:
                 self.CommandEscapeMark()
-                content += self.token.val[1:]; 
+                content += self.token.val[1:];
             else:
-                if not self.is_command_token(): break 
+                if not self.is_command_token(): break
                 cmd = self.Command()
                 self.add_command(element, cmd, txt);
                 content = u"";
 
-        self.mark_line(); 
+        self.mark_line();
         self.CommandMark()
         if (self.la.kind == 5):
-            self.Get( )
+            self.Get()
         self.EndToken()
         self.add_text(cmd, content)
-        self.add_code(cmd) 
+        self.add_code(cmd)
         #cmd.children.append(content) 
         return cmd
 
     def CommandName(self):
-        value = "" 
+        value = ""
         if self.la.kind == 2:
             value = self.Identifier()
         elif self.la.kind == 15:
@@ -971,96 +997,96 @@ class Parser(object):
             self.SynErr(31)
         return value
 
-    def ArgumentExpression(self, cmd ):
+    def ArgumentExpression(self, cmd):
         self.ArgumentStartMark()
         if (self.la.kind == 5):
-            self.Get( )
+            self.Get()
         if (self.StartOf(4)):
             self.ArgumentParameters(cmd)
         if (self.la.kind == 5):
-            self.Get( )
+            self.Get()
         self.ArgumentEndMark()
 
     def TextArguments(self, element):
-        txt = u"" 
+        txt = u""
         self.TextArgumentStartMark()
-        self.mark_line() 
+        self.mark_line()
         while self.StartOf(5):
             if self.StartOf(6):
                 if self.StartOf(7):
                     self.Get()
                 elif self.la.kind == 5:
-                    self.Get( )
+                    self.Get()
                 else:
                     self.SynErr(32)
-                txt += self.token.val 
+                txt += self.token.val
             elif self.la.kind == 9 or self.la.kind == 17 or self.la.kind == 27:
                 if self.la.kind == 17:
                     self.TextArgumentEndEscapeMark()
                 elif self.la.kind == 9:
                     self.CommandEscapeMark()
                 elif self.la.kind == 27:
-                    self.Get( )
+                    self.Get()
                 else:
                     self.SynErr(33)
-                txt += self.token.val[1:] 
+                txt += self.token.val[1:]
             else:
                 cmd = self.Command()
                 self.add_command(element, cmd, txt);
                 txt = u"";
 
-        self.mark_line() 
+        self.mark_line()
         self.TextArgumentEndMark()
         return txt
 
-    def BeginToken(self ):
+    def BeginToken(self):
         if self.la.kind == 19:
-            self.Get( )
+            self.Get()
         elif self.la.kind == 20:
-            self.Get( )
+            self.Get()
         elif self.la.kind == 21:
-            self.Get( )
+            self.Get()
         else:
             self.SynErr(34)
         if (self.la.kind == 5):
-            self.Get( )
+            self.Get()
         self.Expect(14)
 
-    def EndToken(self ):
+    def EndToken(self):
         if self.la.kind == 22:
-            self.Get( )
+            self.Get()
         elif self.la.kind == 23:
-            self.Get( )
+            self.Get()
         elif self.la.kind == 24:
-            self.Get( )
+            self.Get()
         else:
             self.SynErr(35)
 
-    def ArgumentStartMark(self ):
+    def ArgumentStartMark(self):
         self.Expect(10)
 
     def ArgumentParameters(self, cmd):
         index = 0;
         arg = "";
         arg = self.ArgumentParameter(cmd, index)
-        index += (1 if arg.startswith("argument-") else 0) 
+        index += (1 if arg.startswith("argument-") else 0)
         if (self.la.kind == 5):
-            self.Get( )
+            self.Get()
         while self.StartOf(8):
             while self.la.kind == 12:
                 self.ArgumentSeparatorMark()
 
             if (self.la.kind == 5):
-                self.Get( )
+                self.Get()
             arg = self.ArgumentParameter(cmd, index)
-            index += (1 if arg.startswith("argument-") else 0) 
+            index += (1 if arg.startswith("argument-") else 0)
             if (self.la.kind == 5):
-                self.Get( )
+                self.Get()
 
         if (self.la.kind == 5):
             self.Get()
 
-    def ArgumentEndMark(self ):
+    def ArgumentEndMark(self):
         self.Expect(11)
 
     def ArgumentParameter(self, cmd, index):
@@ -1069,22 +1095,22 @@ class Parser(object):
         name = u"argument-{0}".format(index);
         args = self.TextString()
         if (self.la.kind == 5):
-            self.Get( )
+            self.Get()
         if (self.la.kind == 13 or self.la.kind == 14):
             self.ArgumentKeyMark()
             if (self.la.kind == 5):
-                self.Get( )
+                self.Get()
             temp = self.TextString()
             name, args = args, temp;
-            if not name.replace("-", "").isalnum(): raise Exception("Invalid parameter name " + name);
-        cmd[name] = args 
+            self.verify_name(name);
+        cmd[name] = args
         return name
 
-    def ArgumentSeparatorMark(self ):
+    def ArgumentSeparatorMark(self):
         self.Expect(12)
 
     def TextString(self):
-        value = u"" 
+        value = u""
         if self.la.kind == 6 or self.la.kind == 7:
             value = self.CommonString()
         elif self.la.kind == 10:
@@ -1095,104 +1121,104 @@ class Parser(object):
             self.SynErr(36)
         return value
 
-    def ArgumentKeyMark(self ):
+    def ArgumentKeyMark(self):
         if self.la.kind == 13:
-            self.Get( )
+            self.Get()
         elif self.la.kind == 14:
-            self.Get( )
+            self.Get()
         else:
             self.SynErr(37)
 
-    def IdentifierStartMark(self ):
+    def IdentifierStartMark(self):
         self.Expect(15)
 
-    def IdentifierEndMark(self ):
+    def IdentifierEndMark(self):
         self.Expect(16)
 
-    def TextArgumentStartMark(self ):
+    def TextArgumentStartMark(self):
         self.Expect(15)
 
-    def TextArgumentEndMark(self ):
+    def TextArgumentEndMark(self):
         self.Expect(16)
 
-    def TextArgumentEndEscapeMark(self ):
+    def TextArgumentEndEscapeMark(self):
         self.Expect(17)
 
-    def KeyStringStartMark(self ):
+    def KeyStringStartMark(self):
         self.Expect(10)
 
-    def KeyStringEndMark(self ):
+    def KeyStringEndMark(self):
         self.Expect(11)
 
-    def KeyStringEndEscapeMark(self ):
+    def KeyStringEndEscapeMark(self):
         self.Expect(18)
 
-    def Identifier(self ):
+    def Identifier(self):
         self.Expect(2)
-        value = self.token.val 
+        value = self.token.val
         while self.la.kind == 2 or self.la.kind == 25 or self.la.kind == 26:
             if self.la.kind == 25:
-                self.Get( )
+                self.Get()
             elif self.la.kind == 26:
-                self.Get( )
+                self.Get()
             else:
                 self.Get()
-            value += self.token.val 
+            value += self.token.val
 
         return value
 
     def CommonString(self):
-        value = u"" 
+        value = u""
         if self.la.kind == 6:
-            self.Get( )
+            self.Get()
         elif self.la.kind == 7:
-            self.Get( )
+            self.Get()
         else:
             self.SynErr(38)
         value += eval("u" + self.token.val);
         return value
 
     def KeyString(self):
-        value = u"" 
+        value = u""
         self.KeyStringStartMark()
         while self.StartOf(9):
             if self.StartOf(10):
                 if self.StartOf(11):
                     self.Get()
                 elif self.la.kind == 5:
-                    self.Get( )
+                    self.Get()
                 else:
                     self.SynErr(39)
-                value += self.token.val 
+                value += self.token.val
             else:
                 if self.la.kind == 18:
                     self.KeyStringEndEscapeMark()
                 elif self.la.kind == 27:
-                    self.Get( )
+                    self.Get()
                 else:
                     self.SynErr(40)
-                value += self.token.val[1:] 
+                value += self.token.val[1:]
 
         self.KeyStringEndMark()
         return value
 
     def AnyTextString(self):
-        value = u"" 
+        value = u""
         value = self.AnyTextChar()
-        v = u""; 
+        v = u"";
         while self.la.kind == 1 or self.la.kind == 2 or self.la.kind == 3:
             v = self.AnyTextChar()
-            value += v; 
+            value += v;
 
         return value
 
-    def AnyTextChar(self ):
+    def AnyTextChar(self):
         if self.la.kind == 1 or self.la.kind == 3:
             if self.la.kind == 3:
-                self.Get( )
+                self.Get()
             else:
                 self.Get()
-            value = self.token.val 
+            value = self.token.val
         elif self.la.kind == 2:
             value = self.Identifier()
         else:
@@ -1200,11 +1226,11 @@ class Parser(object):
         return value
 
 
-    def Parse(self, scanner ):
+    def Parse(self, scanner):
         self.scanner = scanner
-        self.la = Token( )
+        self.la = Token()
         self.la.val = u''
-        self.Get( )
+        self.Get()
         self.Syntax()
         self.Expect(0)
 
@@ -1221,7 +1247,7 @@ class Parser(object):
         [x, T, T, T, x, T, T, T, x, x, T, x, T, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x],
         [x, T, T, T, T, T, T, T, T, T, T, x, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, x],
         [x, T, T, T, T, T, T, T, T, T, T, x, T, T, T, T, T, T, x, T, T, T, T, T, T, T, T, x, T, x],
-        [x, T, T, T, T, x, T, T, T, T, T, x, T, T, T, T, T, T, x, T, T, T, T, T, T, T, T, x, T,x]
+        [x, T, T, T, T, x, T, T, T, T, T, x, T, T, T, T, T, T, x, T, T, T, T, T, T, T, T, x, T, x]
 
     ]
 

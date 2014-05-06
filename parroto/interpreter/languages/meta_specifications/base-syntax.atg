@@ -2,7 +2,16 @@ from parroto.interpreter.languages.meta import Element
 COMPILER Syntax
    document = None
    positions_mark = []
-   code_mark = []
+   code_marks = []
+   _code_mark = []
+   @property
+   def code_mark(self):
+      if self.code_marks == []:
+          self.code_marks.append([])
+      return self.code_marks[-1]
+   @code_mark.setter
+   def code_mark(self, value):
+      self.code_marks.append([])
    def mark_line(self):
       self.positions_mark.append(self.token.pos + len(self.token.val))
       self.code_mark.append( (self.token.next.line, self.token.next.col) )
@@ -32,13 +41,18 @@ COMPILER Syntax
           cmd["__code__"] = ""
           for portion in portions:
               cmd["__code__"].children.append(formatter(repr(portion)))
-
+      self.code_marks.pop(-1)
+   def verify_name(self, name):
+      #if not name.replace("-","").isalnum(): raise Exception("Invalid parameter name "+name);
+      if not name.replace("-","").replace("_","").isalnum():
+          raise Exception("Invalid parameter name "+name);
 
 
 CHARACTERS
     letter   = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" .
     digit    = "0123456789" .
-    common   = "|!#$%&/?-.,;:*[]()".
+    /*common   = "|!#$%&/?-.,;:*[]()". <--- FIX THIS */
+    common   = "|!#$%&/?-.,;:*[]".
     noquote1 = ANY - "'".
     noquote2 = ANY - '"'.
     space    = CHR(9) .. CHR(13) + " ".
@@ -53,6 +67,7 @@ TOKENS
     string1    =  "'" {noquote1 | "\\'" } "'".
     string2    =  '"' {noquote2 | '\\"' } '"'.
 
+    /*patch01    = $$KeyStringEndMark CONTEXT($$ArgumentEndMark).*/
 
 
 COMMENTS
@@ -153,7 +168,7 @@ PRODUCTIONS
                 ArgumentKeyMark
                 [spaces]
                 TextString<out temp>                    (. name, args = args, temp; .)
-                                                        (. if not name.replace("-","").isalnum(): raise Exception("Invalid parameter name "+name); .)
+                                                        (. self.verify_name(name); .)
             ]
             (. cmd[name] = args .)
         .
@@ -218,7 +233,7 @@ PRODUCTIONS
 **********************/
     TextArguments<out txt, element>                     (. txt = u"" .)
         =   TextArgumentStartMark                       (. self.mark_line() .)
-            {   (ANY | spaces)                          (. txt += self.token.val .)
+            { (ANY | spaces)                          (. txt += self.token.val .)
             |
                 (   TextArgumentEndEscapeMark
                 |   CommandEscapeMark
@@ -249,7 +264,7 @@ PRODUCTIONS
         .
     KeyString<out value>                                (. value = u"" .)
         =   KeyStringStartMark
-            {   (ANY | spaces)                          (. value += self.token.val .)
+            { (ANY | spaces)                          (. value += self.token.val .)
             |
                 (   KeyStringEndEscapeMark
                 |   '\\%')                              (. value += self.token.val[1:] .)

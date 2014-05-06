@@ -125,7 +125,7 @@ class Scanner(object):
     start = [
         0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        4, 1, 7, 1, 1, 1, 1, 5, 1, 1, 1, 0, 1, 1, 1, 1,
+        4, 1, 7, 1, 1, 1, 1, 5, 0, 0, 1, 0, 1, 1, 1, 1,
         9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 1, 1, 0, 16, 0, 1,
         0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
         2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 21, 1, 0, 2,
@@ -320,7 +320,7 @@ class Scanner(object):
             elif state == 1:
                 if (self.ch == '!'
                     or self.ch >= '#' and self.ch <= '&'
-                    or self.ch >= '(' and self.ch <= '*'
+                    or self.ch == '*'
                     or self.ch >= ',' and self.ch <= '/'
                     or self.ch >= ':' and self.ch <= ';'
                     or self.ch == '?'
@@ -717,7 +717,18 @@ class Parser(object):
 
     document = None
     positions_mark = []
-    code_mark = []
+    code_marks = []
+    _code_mark = []
+
+    @property
+    def code_mark(self):
+        if self.code_marks == []:
+            self.code_marks.append([])
+        return self.code_marks[-1]
+
+    @code_mark.setter
+    def code_mark(self, value):
+        self.code_marks.append([])
 
     def mark_line(self):
         self.positions_mark.append(self.token.pos + len(self.token.val))
@@ -754,6 +765,12 @@ class Parser(object):
             cmd["__code__"] = ""
             for portion in portions:
                 cmd["__code__"].children.append(formatter(repr(portion)))
+        self.code_marks.pop(-1)
+
+    def verify_name(self, name):
+        #if not name.replace("-","").isalnum(): raise Exception("Invalid parameter name "+name);
+        if not name.replace("-", "").replace("_", "").isalnum():
+            raise Exception("Invalid parameter name " + name);
 
 
     def __init__(self):
@@ -1073,7 +1090,7 @@ class Parser(object):
                 self.Get()
             temp = self.TextString()
             name, args = args, temp;
-            if not name.replace("-", "").isalnum(): raise Exception("Invalid parameter name " + name);
+            self.verify_name(name);
         cmd[name] = args
         return name
 

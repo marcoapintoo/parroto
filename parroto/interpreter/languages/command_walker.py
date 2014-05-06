@@ -85,9 +85,15 @@ class DocumentContextData(object):
     def __str__(self):
         return str(self.__dict__)
 
+    @multimethod()
     def raise_event(self, event, command):
         self.events.setdefault(event, EventCollection())
         self.events[event].execute(command)
+
+    @multimethod(event=(list, tuple, set))
+    def raise_event(self, event, command):
+        for e in event:
+            self.raise_event(e, command)
 
     def find_tag(self, tag_name):
         return self.pool.find_tag(tag_name)
@@ -102,12 +108,36 @@ class DocumentContextData(object):
         return self.pool.fill_callable(target, document)
 
 
+class DocumentFlag(dict):
+    def __init__(self, *args, **kwargs):
+        super(DocumentFlag, self).__init__(*args, **kwargs)
+
+    def __getitem__(self, item):
+        return super(DocumentFlag, self).__getitem__(item.lower())
+
+    def __setitem__(self, key, value):
+        super(DocumentFlag, self).__setitem__(key.lower(), value)
+
+    def __missing__(self, key):
+        # self.disable(key)
+        self.enable(key)
+        return self[key]
+
+    def enable(self, key):
+        self[key] = True
+
+    def disable(self, key):
+        self[key] = False
+
+
 class DocumentData(DocumentContextData):
     scopes = None
+    flags = None
 
     def __init__(self):
         super(DocumentData, self).__init__()
         self.scopes = []
+        self.flags = DocumentFlag()
 
     def create_context(self, filename="<stdin>"):
         self.scopes.append(DocumentContextData(filename=filename))
@@ -221,6 +251,7 @@ class CommandPool(dict):
         def create_handler(handler, key):
             def call_wrapper(*args, **kwargs):
                 return handler(CommandData(document=document), *args, **kwargs)
+
             return call_wrapper
 
         for key, handler in self.items():
@@ -353,7 +384,7 @@ class StringCommand(object):
         # exec code in globals(), locals()
         variables = {}
         # !command.document.private_pool.fill_callable(variables, command.document)
-        #!command.document.pool.fill_callable(variables, command.document)
+        # !command.document.pool.fill_callable(variables, command.document)
         command.document.fill_callable(variables, command.document)
         variables["document"] = command.document
         variables["command"] = command
@@ -367,7 +398,7 @@ class StringCommand(object):
         try:
             return self.unsecure_call(command, *args, **kwargs)
         except Exception, e:
-            Message.error("Executing {}: {}".format(self.codename(), str(e)))
+            Message.error("Executing {}: {}. {}".format(self.codename(), str(e), command.name))
             raise e
 
     def __call__(self, *args, **kwargs):
@@ -410,9 +441,12 @@ class LoadFile(object):
 def add_events(handler):
     @wraps(handler)
     def handler_with_event(command, *args, **kwargs):
-        command.document.raise_event("enter", command)
+        events_enabled = command.document.flags["events"]
+        if events_enabled:
+            command.document.raise_event("enter", command)
         return_value = handler(command, *args, **kwargs)
-        command.document.raise_event("leave", command)
+        if events_enabled:
+            command.document.raise_event(("leave", "exit"), command)
         return return_value
 
     return handler_with_event
@@ -441,6 +475,25 @@ class CommandWalker(object):
         self.pool.setdefault("execute", self.execute_command)
         self.pool.setdefault("event", self.event_command)
         self.pool.setdefault("include", self.include_command)
+        self.pool.setdefault("document-flag", self.document_flag_command)
+        self.pool.setdefault("document-flags", self.document_flag_command)
+
+    @staticmethod
+    def __get_argument(command, name, default):
+        value = command.structure.get(name, default)
+        if is_a(value, Element):
+            return CommandWalker(root=value, document=command.document).walk()
+        return value
+
+    @staticmethod
+    def document_flag_command(command, *args, **kwargs):
+        enabled = CommandWalker.__get_argument(command, "enabled", "")
+        disabled = CommandWalker.__get_argument(command, "disabled", "")
+        for name in enabled.split(","):
+            command.document.flags.enable(name.strip())
+        for name in disabled.split(","):
+            command.document.flags.disable(name.strip())
+        return ""
 
     @staticmethod
     @add_events
@@ -513,7 +566,8 @@ class CommandWalker(object):
 
 if __name__ == "__main__":
     loader = LoadFile(
-        filename="example01.parroto",
+        # filename="example01.parroto",
+        filename="tex-base.parroto",
         document=DocumentData()
     )
     print loader.load()
